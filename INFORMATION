@@ -2,8 +2,8 @@ Run this in terminal: cd /Users/viggorey/Desktop/lab-inventory
 Then: npm run dev
 
 
-### Upload to github
-https://www.bing.com/videos/riverview/relatedvideo?q=uploading+next.js+website+to+github+repository&&view=riverview&mmscn=mtsc&mid=B6875389246AE511A678B6875389246AE511A678&&aps=137&FORM=VMSOVR
+### Upload to github and vercel
+https://www.youtube.com/watch?v=2tQNI9NuBUo&t=149s
 git remote -v
 git remote remove origin
 git remote add origin https://github.com/viggorey/lab-inventory.git

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import _ from 'lodash';
 
@@ -24,13 +26,17 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Get unique values for the specified field
   const uniqueValues = _.uniq(items.map(item => item[field])).filter((value): value is string => Boolean(value));
 
   useEffect(() => {
-    // Handle click outside to close suggestions
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
@@ -62,17 +68,29 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     setShowSuggestions(false);
   };
 
+  const renderInput = () => (
+    <input
+      className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500 font-normal"
+      type="text"
+      value={value}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required
+    />
+  );
+
+  if (!mounted) {
+    return (
+      <div className="relative">
+        {renderInput()}
+      </div>
+    );
+  }
+
   return (
     <div ref={wrapperRef} className="relative">
-      <input
-        className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500 font-normal"
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        placeholder={placeholder}
-        required
-      />
-      {showSuggestions && suggestions.length > 0 && (
+      {renderInput()}
+      {mounted && showSuggestions && suggestions.length > 0 && (
         <ul className="absolute z-10 w-full bg-white border rounded-b mt-1 max-h-48 overflow-y-auto shadow-lg">
           {suggestions.map((suggestion, index) => (
             <li

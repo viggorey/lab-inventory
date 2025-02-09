@@ -54,6 +54,7 @@ const formatFileSize = (bytes: number): string => {
 
 const InventorySystem = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [isClient, setIsClient] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -93,6 +94,7 @@ const InventorySystem = () => {
   // Check user role
 // In InventorySystem.tsx, update the useEffect hook
 useEffect(() => {
+  setIsClient(true);
   const checkUserRole = async () => {
     try {
       setLoading(true);
@@ -137,10 +139,14 @@ useEffect(() => {
   // Fetch items from database
   const fetchItems = async (fetchAll: boolean = false) => {
     try {
+      console.log(`Starting fetchItems (fetchAll: ${fetchAll})`);
+      
       // First get total count
-      const { count } = await supabase
+      const countResponse = await supabase
         .from('inventory')
         .select('*', { count: 'exact', head: true });
+      
+      console.log('Count response:', countResponse);
   
       // Then get data
       let query = supabase
@@ -149,25 +155,29 @@ useEffect(() => {
         .order('created_at', { ascending: false });
   
       if (!fetchAll) {
-        // Only paginate if we're not fetching all
         query = query.range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
       }
   
       const { data, error } = await query;
+      console.log(`Query response (fetchAll: ${fetchAll}):`, { data, error });
   
       if (error) {
-        console.error('Error fetching items:', error);
-        return;
+        console.error('Fetch error:', error);
+        throw error;
       }
   
       if (fetchAll) {
         setAllItems(data || []);
+        console.log('Updated allItems');
       } else {
         setItems(data || []);
+        console.log('Updated items');
       }
-      setTotalItems(count || 0);
+      setTotalItems(countResponse.count || 0);
+      console.log('Updated totalItems');
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in fetchItems:', error);
+      throw error;
     }
   };
 
@@ -178,7 +188,10 @@ useEffect(() => {
   
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error('No user found');
+        return;
+      }
   
       // Insert new item
       const { data: newItemData, error: insertError } = await supabase
@@ -187,24 +200,42 @@ useEffect(() => {
         .select()
         .single();
   
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
   
-      // Log the creation
-      if (newItemData) {
+      // If we get here, item was created successfully
+      console.log('Item created:', newItemData);
+  
+      try {
+        // Create log entry
         const { error: logError } = await supabase
           .from('inventory_logs')
-          .insert({
+          .insert([{  // Note the array wrapper
             item_id: newItemData.id,
             user_id: user.id,
             user_email: user.email,
             action_type: 'create',
             timestamp: new Date().toISOString()
-          });
+          }]);
   
-        if (logError) throw logError;
+        if (logError) {
+          console.error('Log creation error:', logError);
+          // Don't throw here, we still want to update the UI
+        }
+      } catch (logError) {
+        console.error('Log creation failed:', logError);
+        // Don't throw here either
       }
   
-      await fetchItems();
+      // Update UI regardless of log success
+      await Promise.all([
+        fetchItems(),
+        fetchItems(true)
+      ]);
+  
+      // Reset form
       setNewItem({
         name: '',
         quantity: '',
@@ -212,8 +243,14 @@ useEffect(() => {
         location: '',
         source: ''
       });
+
+  
     } catch (error) {
-      console.error('Error adding item:', error);
+      console.error('Error details:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        type: typeof error
+      });
       alert('Failed to add item. Please try again.');
     }
   };
@@ -222,17 +259,27 @@ useEffect(() => {
   const handleDelete = async (itemId: string) => {
     if (!isAdmin) return;
     if (window.confirm('Are you sure you want to delete this item?')) {
-      const { error } = await supabase
-        .from('inventory')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) {
+      try {
+        const { error } = await supabase
+          .from('inventory')
+          .delete()
+          .eq('id', itemId);
+  
+        if (error) {
+          console.error('Error deleting item:', error);
+          return;
+        }
+  
+        // Close the edit modal
+        setIsEditing(false);
+        setEditingItem(null);
+        
+        // Refresh the items
+        await fetchItems();
+        await fetchItems(true);
+      } catch (error) {
         console.error('Error deleting item:', error);
-        return;
       }
-
-      await fetchItems();
     }
   };
 
@@ -524,7 +571,7 @@ useEffect(() => {
                 </div>
               </div>
   
-              {isAdmin && (
+              {isAdmin && isClient && (
                 <form onSubmit={handleSubmit} className="grid grid-cols-5 gap-4 mb-6">
                   <input
                     className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
