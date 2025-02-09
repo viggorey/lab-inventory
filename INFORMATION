@@ -2,6 +2,17 @@ Run this in terminal: cd /Users/viggorey/Desktop/lab-inventory
 Then: npm run dev
 
 
+### Upload to github
+https://www.bing.com/videos/riverview/relatedvideo?q=uploading+next.js+website+to+github+repository&&view=riverview&mmscn=mtsc&mid=B6875389246AE511A678B6875389246AE511A678&&aps=137&FORM=VMSOVR
+git remote -v
+git remote remove origin
+git remote add origin https://github.com/viggorey/lab-inventory.git
+git branch -M main
+git push -u origin main
+
+git add .
+git commit -m "upload to repository"
+git push
 
 
 ### SUPABASE
@@ -13,6 +24,8 @@ https://supabase.com/dashboard/project/lmijffjvwpfmvccbgiyr/building
 (Project settings>API)
 Project URL: https://lmijffjvwpfmvccbgiyr.supabase.co
 anon/public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaWpmZmp2d3BmbXZjY2JnaXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NTgzMzIsImV4cCI6MjA1NDQzNDMzMn0.o-HyE-oUtF85k-hk1pJGJEyiTvLDuC1VNLf9dqsAgfA
+
+
 
 
 # Make first admin (register on website>supabase SQL editor and run this)
@@ -41,67 +54,29 @@ WHERE auth.users.email = 'vr382@cam.ac.uk';
 
 
 
+# DELETING AN ADMIN
 
+-- 1. First get or note the admin's user ID
+-- In your case it's: '1cecfa29-60b0-404b-866d-d5ce48703cc3'
 
+-- 2. Update any inventory items created by this admin to be owned by another admin
+-- Replace 'new-admin-id' with the ID of another admin user
+UPDATE inventory 
+SET created_by = 'new-admin-id' 
+WHERE created_by = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
 
+-- 3. Delete their logs
+DELETE FROM inventory_logs 
+WHERE user_id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
 
-### LAB - INVENTORY STRUCTURE AND FUNCTION
+-- 4. Delete their bookings
+DELETE FROM inventory_bookings 
+WHERE user_id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
 
-lab-inventory/
-├── src/                      # Source code directory
-│   ├── app/                  # Next.js app directory
-│   │   └── page.tsx         # Main page of your application
-│   └── components/          # React components
-│       └── InventorySystem.tsx  # Your inventory management component
-├── public/                   # Static files (images, etc.)
-├── node_modules/            # Installed dependencies
-├── package.json             # Project configuration and dependencies
-├── package-lock.json        # Exact dependency versions
-└── tailwind.config.ts       # Tailwind CSS configuration
+-- 5. Delete their profile
+DELETE FROM profiles 
+WHERE id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
 
-
-##Key files and their purposes:
-
-#src/app/page.tsx: (ALSO EDITED BUT MOSTLY DELETED)
-
-This is your main page
-It imports and displays the InventorySystem component
-Uses the 'use client' directive because it contains client-side code
-
-#src/components/InventorySystem.tsx: (THE ONE I EDITED)
-
-Contains your main inventory management interface
-Handles all the functionality:
-
-Adding new items
-Searching items
-Excel import/export
-Data display in a table format
-
-#tailwind.config.ts:
-
-Configures Tailwind CSS
-Defines where to look for CSS classes
-Sets up any theme customizations
-
-#package.json:
-
-Lists all project dependencies
-Contains scripts like npm run dev
-Defines project metadata
-
-
-#The application currently:
-
-Uses React for the user interface
-Uses TypeScript for type safety
-Uses Tailwind CSS for styling
-Includes XLSX library for Excel file handling
-Uses Lucide React for icons
-
-When you run npm run dev, Next.js:
-
-#Starts a development server
-Watches for file changes
-Provides hot reloading (updates as you make changes)
-Runs at http://localhost:3000
+-- 6. Finally delete the user
+DELETE FROM auth.users 
+WHERE id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';

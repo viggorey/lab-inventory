@@ -23,46 +23,33 @@ const AuthForm = () => {
           password,
         });
         if (error) throw error;
-        // In AuthForm.tsx, update the signup section
       } else {
-            const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            });
+        console.log("Starting signup process...");
+        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
         
-            if (signUpError) throw signUpError;
-        
-            if (user) {
-            try {
-                // Explicitly create a profile with pending status
-                const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([
-                    {
-                    id: user.id,
-                    email: user.email,
-                    role: 'pending',  // Make sure this is 'pending'
-                    created_at: new Date().toISOString()
-                    }
-                ]);
-        
-                if (profileError) {
-                console.error('Profile creation error:', profileError);
-                // If profile creation fails, try to delete the auth user
-                await supabase.auth.admin.deleteUser(user.id);
-                throw new Error('Failed to create user profile. Please try again.');
-                }
-                
-                setMessage('Sign up successful! Please wait for admin approval. You will not be able to access the system until an admin approves your account.');
-            } catch (error) {
-                console.error('Profile creation error:', error);
-                throw new Error('Failed to complete signup process. Please try again.');
-            }
-            }
+        console.log("Signup result:", { user, signUpError });
+  
+        if (signUpError) {
+          console.error("Signup error details:", signUpError);
+          throw signUpError;
         }
+  
+        if (user) {
+          setMessage('Account created! Please check your email for verification and wait for admin approval.');
+        } else {
+          setMessage('Something went wrong. Please try again.');
+        }
+      }
     } catch (error: unknown) {
-      const authError = error as AuthError;
-      setMessage(authError.message);
+      console.error('Auth error:', error);
+      if (error instanceof Error) {
+        setMessage(error.message);
+      } else {
+        setMessage('Failed to create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
