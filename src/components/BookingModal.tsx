@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar } from 'lucide-react';
+import { X } from 'lucide-react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -69,7 +69,7 @@ interface CalendarEvent {
         }
       };
       getCurrentUser();
-    }, [item.id]); 
+    }, [item.id, fetchExistingBookings]); 
 
   const handleBook = async () => {
     // Validate the booking
