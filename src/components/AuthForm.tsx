@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { AuthError } from '@supabase/supabase-js';
 
 const AuthForm = () => {
   const [email, setEmail] = useState('');

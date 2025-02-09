@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Download, Upload, LogOut } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
@@ -10,21 +10,9 @@ import Pagination from '@/components/Pagination';
 import { Calendar, Edit, X, ClipboardList, Trash2 } from 'lucide-react';
 import BookingModal from '@/components/BookingModal';
 import BookingsList from '@/components/BookingsList';
+import { Item } from '@/types/inventory';
 
-interface Item {
-  id: string;
-  name: string;
-  quantity: string;
-  category: string;
-  location: string;
-  source: string;
-  created_at?: string;
-  created_by?: string;
-}
-
-interface UserProfile {
-  role: string;
-}
+const DEBUG = process.env.NODE_ENV === 'development';
 
 interface InventoryLog {
   id: string;
@@ -91,95 +79,87 @@ const InventorySystem = () => {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const DELETION_PHRASE = "I will delete all of Walter's inventory";
 
-  // Check user role
-// In InventorySystem.tsx, update the useEffect hook
-useEffect(() => {
-  setIsClient(true);
-  const checkUserRole = async () => {
+
+
+  // Keep fetchItems outside useEffect but wrap it in useCallback
+  const fetchItems = useCallback(async (fetchAll: boolean = false) => {
     try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      if (DEBUG) console.log(`Starting fetchItems (fetchAll: ${fetchAll})`);
       
-      if (user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
-          setIsAdmin(false);
-          return;
-        }
-
-        if (profileData.role === 'pending' || profileData.role === 'denied') {
-          await supabase.auth.signOut();
-          return;
-        }
-
-        const adminStatus = profileData?.role === 'admin';
-        setIsAdmin(adminStatus);
-      }
-      // Fetch paginated items
-      await fetchItems();
-      // Fetch all items for search
-      await fetchItems(true);
-    } catch (error) {
-      console.error('Error in checkUserRole:', error);
-      setIsAdmin(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  checkUserRole();
-}, [currentPage]);
-
-  // Fetch items from database
-  const fetchItems = async (fetchAll: boolean = false) => {
-    try {
-      console.log(`Starting fetchItems (fetchAll: ${fetchAll})`);
-      
-      // First get total count
       const countResponse = await supabase
         .from('inventory')
         .select('*', { count: 'exact', head: true });
       
-      console.log('Count response:', countResponse);
-  
-      // Then get data
       let query = supabase
         .from('inventory')
         .select('*')
         .order('created_at', { ascending: false });
-  
+
       if (!fetchAll) {
         query = query.range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
       }
-  
+
       const { data, error } = await query;
-      console.log(`Query response (fetchAll: ${fetchAll}):`, { data, error });
-  
-      if (error) {
-        console.error('Fetch error:', error);
-        throw error;
-      }
-  
+
+      if (error) throw error;
+
       if (fetchAll) {
         setAllItems(data || []);
-        console.log('Updated allItems');
       } else {
         setItems(data || []);
-        console.log('Updated items');
       }
       setTotalItems(countResponse.count || 0);
-      console.log('Updated totalItems');
     } catch (error) {
       console.error('Error in fetchItems:', error);
-      throw error;
     }
-  };
+  }, [currentPage]);
+
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileError) {
+            console.error('Profile fetch error:', profileError);
+            setIsAdmin(false);
+            return;
+          }
+
+          if (profileData.role === 'pending' || profileData.role === 'denied') {
+            await supabase.auth.signOut();
+            return;
+          }
+
+          const adminStatus = profileData?.role === 'admin';
+          setIsAdmin(adminStatus);
+        }
+        
+        // Fetch data
+        await Promise.all([
+          fetchItems(),      // Fetch paginated items
+          fetchItems(true)   // Fetch all items
+        ]);
+      } catch (error) {
+        console.error('Error in checkUserRole:', error);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setIsClient(true);
+    checkUserRole();
+  }, [fetchItems]); // Add fetchItems as dependency
+
 
   // Handle new item submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -260,14 +240,37 @@ useEffect(() => {
     if (!isAdmin) return;
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
-        const { error } = await supabase
+        // First delete related logs
+        const { error: logsError } = await supabase
+          .from('inventory_logs')
+          .delete()
+          .eq('item_id', itemId);
+  
+        if (logsError) {
+          console.error('Error deleting logs:', logsError);
+          throw logsError;
+        }
+  
+        // Then delete related bookings
+        const { error: bookingsError } = await supabase
+          .from('inventory_bookings')
+          .delete()
+          .eq('item_id', itemId);
+  
+        if (bookingsError) {
+          console.error('Error deleting bookings:', bookingsError);
+          throw bookingsError;
+        }
+  
+        // Finally delete the inventory item
+        const { error: inventoryError } = await supabase
           .from('inventory')
           .delete()
           .eq('id', itemId);
   
-        if (error) {
-          console.error('Error deleting item:', error);
-          return;
+        if (inventoryError) {
+          console.error('Error deleting inventory item:', inventoryError);
+          throw inventoryError;
         }
   
         // Close the edit modal
@@ -275,10 +278,17 @@ useEffect(() => {
         setEditingItem(null);
         
         // Refresh the items
-        await fetchItems();
-        await fetchItems(true);
+        await Promise.all([
+          fetchItems(),
+          fetchItems(true)
+        ]);
+  
+        // Show success message (optional)
+        if (DEBUG) console.log('Item deleted successfully');
+  
       } catch (error) {
-        console.error('Error deleting item:', error);
+        console.error('Error during deletion process:', error);
+        alert('Failed to delete item. Please try again.');
       }
     }
   };

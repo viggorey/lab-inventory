@@ -2,12 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import _ from 'lodash';
+import { Item } from '@/types/inventory';
 
-interface Item {
-  [key: string]: any;
-  category?: string;
-  location?: string;
-}
+
 
 interface AutocompleteInputProps {
   value: string;

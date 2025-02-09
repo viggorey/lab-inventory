@@ -35,40 +35,41 @@ interface CalendarEvent {
     };
   }
 
-const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingComplete }) => {
-  const [quantity, setQuantity] = useState(1);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
-
-
-  useEffect(() => {
-    fetchExistingBookings();
-    const getCurrentUser = async () => {
+  const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingComplete }) => {
+    const [quantity, setQuantity] = useState(1);
+    const [startDate, setStartDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  
+    // Define fetchExistingBookings OUTSIDE of useEffect
+    const fetchExistingBookings = async () => {
+      const { data, error } = await supabase
+        .from('inventory_bookings')
+        .select('*')
+        .eq('item_id', item.id)
+        .eq('status', 'active');
+  
+      if (error) {
+        console.error('Error fetching bookings:', error);
+        return;
+      }
+  
+      setExistingBookings(data || []);
+    };
+  
+    // Single useEffect that calls both functions
+    useEffect(() => {
+      fetchExistingBookings();
+      const getCurrentUser = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {  // Add the optional chaining
+        if (user?.email) {
           setCurrentUserEmail(user.email);
         }
       };
       getCurrentUser();
-    }, [item.id]);
-
-  const fetchExistingBookings = async () => {
-    const { data, error } = await supabase
-      .from('inventory_bookings')
-      .select('*')
-      .eq('item_id', item.id)
-      .eq('status', 'active');
-
-    if (error) {
-      console.error('Error fetching bookings:', error);
-      return;
-    }
-
-    setExistingBookings(data || []);
-  };  
+    }, [item.id]); 
 
   const handleBook = async () => {
     // Validate the booking
