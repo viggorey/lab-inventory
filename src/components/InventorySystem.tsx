@@ -235,43 +235,53 @@ const InventorySystem = () => {
     }
   };
 
-  // Add delete function
   const handleDelete = async (itemId: string) => {
     if (!isAdmin) return;
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
-        // First delete related logs
-        const { error: logsError } = await supabase
-          .from('inventory_logs')
-          .delete()
-          .eq('item_id', itemId);
+        console.log('Starting deletion process for item:', itemId);
   
-        if (logsError) {
-          console.error('Error deleting logs:', logsError);
-          throw logsError;
-        }
-  
-        // Then delete related bookings
-        const { error: bookingsError } = await supabase
+        // First delete related bookings
+        console.log('Deleting bookings...');
+        const { data: bookings, error: bookingsError } = await supabase
           .from('inventory_bookings')
           .delete()
-          .eq('item_id', itemId);
+          .eq('item_id', itemId)
+          .select();
   
         if (bookingsError) {
           console.error('Error deleting bookings:', bookingsError);
           throw bookingsError;
         }
+        console.log('Bookings deleted:', bookings);
+  
+        // Then delete related logs
+        console.log('Deleting logs...');
+        const { data: logs, error: logsError } = await supabase
+          .from('inventory_logs')
+          .delete()
+          .eq('item_id', itemId)
+          .select();
+  
+        if (logsError) {
+          console.error('Error deleting logs:', logsError);
+          throw logsError;
+        }
+        console.log('Logs deleted:', logs);
   
         // Finally delete the inventory item
-        const { error: inventoryError } = await supabase
+        console.log('Deleting inventory item...');
+        const { data: deletedItem, error: inventoryError } = await supabase
           .from('inventory')
           .delete()
-          .eq('id', itemId);
+          .eq('id', itemId)
+          .select();
   
         if (inventoryError) {
           console.error('Error deleting inventory item:', inventoryError);
           throw inventoryError;
         }
+        console.log('Inventory item deleted:', deletedItem);
   
         // Close the edit modal
         setIsEditing(false);
@@ -283,8 +293,7 @@ const InventorySystem = () => {
           fetchItems(true)
         ]);
   
-        // Show success message (optional)
-        if (DEBUG) console.log('Item deleted successfully');
+        console.log('Deletion process completed successfully');
   
       } catch (error) {
         console.error('Error during deletion process:', error);
