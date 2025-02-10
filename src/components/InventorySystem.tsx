@@ -625,6 +625,7 @@ const InventorySystem = () => {
                       className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
                       placeholder="Quantity"
                       type="number"
+                      min="1"
                       value={newItem.quantity}
                       onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
                       required

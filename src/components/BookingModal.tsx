@@ -124,7 +124,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
   
-      // Create the booking
       const { error: bookingError } = await supabase
         .from('inventory_bookings')
         .insert({
@@ -135,14 +134,13 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
           start_datetime: startDate.toISOString(),
           end_datetime: endDate.toISOString(),
           status: 'active'
-        })
-        .select()
-        .single();
+        });
   
       if (bookingError) throw bookingError;
       
-      onBookingComplete();
+      onBookingComplete(); // This triggers parent component refresh
       onClose();
+      window.location.reload(); // Force page refresh
     } catch (error) {
       console.error('Error booking item:', error);
       setValidationMessage('Failed to book item. Please try again.');
