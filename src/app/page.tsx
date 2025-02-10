@@ -99,7 +99,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
         <div className="text-lg">Loading...</div>
       </div>
     );
@@ -111,7 +111,7 @@ export default function Home() {
 
   if (userRole === 'pending') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
           <h2 className="text-2xl font-bold mb-4 text-center">Account Pending Approval</h2>
           <p className="text-gray-600 mb-4 text-center">
@@ -119,7 +119,10 @@ export default function Home() {
             You will be able to access the system once an admin approves your account.
           </p>
           <button
-            onClick={() => supabase.auth.signOut()}
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = '/';  // Add this line to force a page refresh
+            }}
             className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
           >
             Sign Out
@@ -134,7 +137,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+    <div className="min-h-screen bg-blue-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
         <h2 className="text-2xl font-bold mb-4 text-center">Loading Account Status</h2>
         <p className="text-gray-600 mb-4 text-center">

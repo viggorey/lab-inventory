@@ -563,7 +563,7 @@ const InventorySystem = () => {
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
+    <div className="p-4 max-w-6xl mx-auto bg-blue-50 min-h-screen">
       {loading ? (
         <div className="text-center p-4">Loading...</div>
       ) : (
