@@ -160,18 +160,73 @@ const InventorySystem = () => {
     checkUserRole();
   }, [fetchItems]); // Add fetchItems as dependency
 
-
-  // Handle new item submission
+  // Calculate similarity of item name added (80% warning)
+  function levenshteinDistance(str1: string, str2: string): number {
+    const m = str1.length;
+    const n = str2.length;
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+  
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+  
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j - 1] + 1,
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1
+          );
+        }
+      }
+    }
+    return dp[m][n];
+  }
+  
+  function findSimilarItems(newItemName: string, existingItems: Item[], threshold: number = 0.6): Item[] {
+    const normalizedNewName = newItemName.toLowerCase().trim();
+    const newNameWords = normalizedNewName.split(/\s+/).sort();
+    
+    return existingItems.filter(item => {
+      const normalizedExistingName = item.name.toLowerCase().trim();
+      const existingNameWords = normalizedExistingName.split(/\s+/).sort();
+      
+      // Check word permutations
+      const wordPermutationSimilarity = newNameWords.length === existingNameWords.length &&
+        newNameWords.every((word, i) => 
+          levenshteinDistance(word, existingNameWords[i]) <= 2
+        );
+      
+      // Check overall string similarity
+      const maxLength = Math.max(normalizedNewName.length, normalizedExistingName.length);
+      const distance = levenshteinDistance(normalizedNewName, normalizedExistingName);
+      const stringSimilarity = (maxLength - distance) / maxLength;
+      
+      return wordPermutationSimilarity || stringSimilarity >= threshold;
+    });
+  }
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) return;
   
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No user found');
-        return;
+      // Check for similar items
+      const similarItems = findSimilarItems(newItem.name, items);
+      
+      if (similarItems.length > 0) {
+        const confirmAdd = window.confirm(
+          `Similar items found:\n${similarItems.map(item => 
+            `- ${item.name} (${item.category})`
+          ).join('\n')}\n\nDo you still want to add this item?`
+        );
+        if (!confirmAdd) return;
       }
+  
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
   
       // Insert new item
       const { data: newItemData, error: insertError } = await supabase
@@ -224,13 +279,8 @@ const InventorySystem = () => {
         source: ''
       });
 
-  
-    } catch (error) {
-      console.error('Error details:', {
-        error,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        type: typeof error
-      });
+      } catch (error) {
+      console.error('Error details:', error);
       alert('Failed to add item. Please try again.');
     }
   };

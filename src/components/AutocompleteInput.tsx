@@ -47,17 +47,13 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     onChange(inputValue);
-
-    if (inputValue.length >= 3) {
-      const filtered = uniqueValues.filter((item: string) =>
-        item.toLowerCase().includes(inputValue.toLowerCase())
-      );
-      setSuggestions(filtered);
-      setShowSuggestions(true);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
+  
+    // Show suggestions immediately instead of waiting for 3 characters
+    const filtered = uniqueValues.filter((item: string) =>
+      item.toLowerCase().includes(inputValue.toLowerCase())
+    );
+    setSuggestions(filtered);
+    setShowSuggestions(true);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
