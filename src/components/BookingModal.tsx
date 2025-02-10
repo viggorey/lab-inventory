@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -44,7 +44,7 @@ interface CalendarEvent {
     const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   
     // Define fetchExistingBookings OUTSIDE of useEffect
-    const fetchExistingBookings = async () => {
+    const fetchExistingBookings = useCallback(async () => {
       const { data, error } = await supabase
         .from('inventory_bookings')
         .select('*')
@@ -57,9 +57,8 @@ interface CalendarEvent {
       }
   
       setExistingBookings(data || []);
-    };
+    }, [item.id]);
   
-    // Single useEffect that calls both functions
     useEffect(() => {
       fetchExistingBookings();
       const getCurrentUser = async () => {
@@ -69,7 +68,7 @@ interface CalendarEvent {
         }
       };
       getCurrentUser();
-    }, [item.id, fetchExistingBookings]); 
+    }, [fetchExistingBookings]);
 
   const handleBook = async () => {
     // Validate the booking
