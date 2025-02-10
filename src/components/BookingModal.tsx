@@ -141,22 +141,22 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
   
       if (bookingError) throw bookingError;
   
-      // Send confirmation email
-      const { error: emailError } = await supabase.functions.invoke('send-booking-email', {
-        body: {
-          email: user.email,
-          type: 'confirmation',
-          booking: {
-            itemName: item.name,
-            quantity,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
-          }
-        }
-      });
-  
-      if (emailError) {
-        console.error('Error sending confirmation email:', emailError);
+      try {
+        const response = await supabase.functions.invoke('send-booking-email', {
+          body: JSON.stringify({  // Explicitly stringify
+            email: user.email,
+            type: 'confirmation',
+            booking: {
+              itemName: item.name,
+              quantity,
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString()
+            }
+          })
+        });
+        console.log('Function response:', response);
+      } catch (error) {
+        console.error('Detailed function error:', error);
       }
   
       onBookingComplete();

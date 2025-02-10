@@ -25,10 +25,13 @@ https://supabase.com/dashboard/project/lmijffjvwpfmvccbgiyr/building
 Project URL: https://lmijffjvwpfmvccbgiyr.supabase.co
 anon/public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaWpmZmp2d3BmbXZjY2JnaXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NTgzMzIsImV4cCI6MjA1NDQzNDMzMn0.o-HyE-oUtF85k-hk1pJGJEyiTvLDuC1VNLf9dqsAgfA
 
+## linking account:
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF (lmijffjvwpfmvccbgiyr) # where code is CamponotusLigniperdus1
 
 
 
-# Make first admin (register on website>supabase SQL editor and run this)
+## Make first admin (register on website>supabase SQL editor and run this)
 -- First, lets verify the user exists and get their UUID
 SELECT id, email 
 FROM auth.users 
@@ -52,9 +55,7 @@ WHERE auth.users.email = 'vr382@cam.ac.uk';
 
 
 
-
-
-# DELETING A USER
+## DELETING A USER
 
 -- Function to completely remove a user
 CREATE OR REPLACE FUNCTION delete_user_and_profile(user_uuid UUID)
@@ -79,7 +80,7 @@ SELECT delete_user_and_profile('38987950-23f5-4092-891a-c65c54688fbb');
 
 
 
-# DELETING admin (will all be in 'deleted user' category)
+## DELETING admin (will all be in 'deleted user' category)
 
 -- Function to completely remove a user
 CREATE OR REPLACE FUNCTION delete_user_and_profile(user_uuid UUID)
