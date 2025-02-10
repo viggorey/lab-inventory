@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import AuthForm from '@/components/AuthForm';
 import InventorySystem from '@/components/InventorySystem';
+import PendingApproval from '@/components/PendingApproval';
 import type { User } from '@supabase/supabase-js';
 
 export default function Home() {
@@ -99,8 +100,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-lg text-gray-600">Loading...</div>
       </div>
     );
   }
@@ -110,37 +111,19 @@ export default function Home() {
   }
 
   if (userRole === 'pending') {
-    return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4 text-center">Account Pending Approval</h2>
-          <p className="text-gray-600 mb-4 text-center">
-            Your email has been verified. Your account is now awaiting administrator approval. 
-            You will be able to access the system once an admin approves your account.
-          </p>
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              window.location.href = '/';  // Add this line to force a page refresh
-            }}
-            className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-    );
+    return <PendingApproval />;
   }
 
   if (userRole === 'admin' || userRole === 'user') {
     return <InventorySystem />;
   }
 
+  // Default loading state with new design
   return (
-    <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-4 text-center">Loading Account Status</h2>
-        <p className="text-gray-600 mb-4 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold text-gray-900 text-center">Loading Account Status</h2>
+        <p className="text-gray-600 mt-2 text-center">
           Please wait while we verify your account status...
         </p>
       </div>

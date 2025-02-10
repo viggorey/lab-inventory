@@ -48,14 +48,39 @@ const BookingsList = () => {
 
   const handleCancelBooking = async (bookingId: string) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-
+  
     try {
+      const { data: bookingData } = await supabase
+        .from('inventory_bookings')
+        .select('*, item:inventory(name)')
+        .eq('id', bookingId)
+        .single();
+  
       const { error } = await supabase
         .from('inventory_bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId);
-
+  
       if (error) throw error;
+  
+      // Send cancellation email
+      const { error: emailError } = await supabase.functions.invoke('send-booking-email', {
+        body: {
+          email: bookingData.user_email,
+          type: 'cancellation',
+          booking: {
+            itemName: bookingData.item.name,
+            quantity: bookingData.quantity,
+            startDate: bookingData.start_datetime,
+            endDate: bookingData.end_datetime
+          }
+        }
+      });
+  
+      if (emailError) {
+        console.error('Error sending cancellation email:', emailError);
+      }
+  
       await fetchUserBookings();
     } catch (error) {
       console.error('Error cancelling booking:', error);

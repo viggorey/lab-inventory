@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Download, Upload, LogOut } from 'lucide-react';
+import { Download, Upload, LogOut, Box, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
@@ -563,84 +563,108 @@ const InventorySystem = () => {
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto bg-blue-50 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       {loading ? (
-        <div className="text-center p-4">Loading...</div>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
       ) : (
-        <>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-600 p-2 rounded-lg">
+                  <Box className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Lab Inventory Management
+                </h2>
+              </div>
+              <div className="flex items-center gap-4">
+                {isAdmin && <span className="text-blue-600 font-semibold">Admin</span>}
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* User Management Section */}
           {isAdmin && (
-            <div className="mb-6">
+            <div className="bg-white rounded-xl shadow-lg">
               <UserManagement />
             </div>
           )}
-          <div className="bg-white rounded-lg shadow-lg mb-6">
+
+          {/* Bookings List */}
+          <div className="bg-white rounded-xl shadow-lg">
             <BookingsList />
+          </div>
+
+          {/* Main Content */}
+          <div className="bg-white rounded-xl shadow-lg">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold mb-6 text-gray-900">Lab Inventory Management</h2>
-                <div className="flex items-center gap-2">
-                  {isAdmin && <span className="text-green-600 font-semibold">Admin</span>}
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 bg-red-400/80 text-white px-4 py-2 rounded hover:bg-red-500/85"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </div>
-              </div>
-  
+              {/* Add New Item Form (Admin Only) */}
               {isAdmin && isClient && (
-                <form onSubmit={handleSubmit} className="grid grid-cols-5 gap-4 mb-6">
-                  <input
-                    className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
-                    placeholder="Name"
-                    value={newItem.name}
-                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                    required
-                  />
-                  <input
-                    className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
-                    placeholder="Quantity"
-                    type="number"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
-                    required
-                  />
-                  <AutocompleteInput
-                    value={newItem.category}
-                    onChange={(value) => setNewItem({...newItem, category: value})}
-                    placeholder="Category"
-                    items={items}
-                    field="category"
-                  />
-                  <AutocompleteInput
-                    value={newItem.location}
-                    onChange={(value) => setNewItem({...newItem, location: value})}
-                    placeholder="Location"
-                    items={items}
-                    field="location"
-                  />
-                  <input
-                    className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
-                    placeholder="Source"
-                    value={newItem.source}
-                    onChange={(e) => setNewItem({...newItem, source: e.target.value})}
-                    required
-                  />
-                  <button 
-                    type="submit" 
-                    className="col-span-5 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                  >
-                    Add Item
-                  </button>
+                <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Item</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <input
+                      className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                      placeholder="Name"
+                      value={newItem.name}
+                      onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                      required
+                    />
+                    <input
+                      className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                      placeholder="Quantity"
+                      type="number"
+                      value={newItem.quantity}
+                      onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                      required
+                    />
+                    <AutocompleteInput
+                      value={newItem.category}
+                      onChange={(value) => setNewItem({...newItem, category: value})}
+                      placeholder="Category"
+                      items={items}
+                      field="category"
+                    />
+                    <AutocompleteInput
+                      value={newItem.location}
+                      onChange={(value) => setNewItem({...newItem, location: value})}
+                      placeholder="Location"
+                      items={items}
+                      field="location"
+                    />
+                    <input
+                      className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                      placeholder="Source"
+                      value={newItem.source}
+                      onChange={(e) => setNewItem({...newItem, source: e.target.value})}
+                      required
+                    />
+                    <button 
+                      type="submit" 
+                      className="md:col-span-5 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Add Item
+                    </button>
+                  </div>
                 </form>
               )}
-  
+
+              {/* Action Buttons */}
               <div className="flex gap-4 mb-6">
                 <button 
                   onClick={handleExport}
-                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   Export to Excel
@@ -649,7 +673,7 @@ const InventorySystem = () => {
                 {isAdmin && (
                   <>
                     <button 
-                      className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                       onClick={() => document.getElementById('file-upload')?.click()}
                     >
                       <Upload className="w-4 h-4" />
@@ -665,69 +689,88 @@ const InventorySystem = () => {
                   </>
                 )}
               </div>
-  
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                 <thead>
-                      <tr>
-                        {Object.keys(searchTerms).map(key => (
-                          <th key={key} className="border p-2 bg-gray-50 text-gray-900">
-                            <div className="flex flex-col gap-2">
-                              <span className="capitalize font-semibold text-gray-900">{key}</span>
-                              {key === 'category' || key === 'location' ? (
-                                <AutocompleteInput
-                                  value={searchTerms[key]}
-                                  onChange={(value) => setSearchTerms({...searchTerms, [key]: value})}
-                                  placeholder={`Search ${key}...`}
-                                  items={items}
-                                  field={key as 'category' | 'location'}
-                                />
-                              ) : (
-                                <input
-                                  placeholder={`Search ${key}...`}
-                                  value={searchTerms[key as keyof typeof searchTerms]}
-                                  onChange={(e) => setSearchTerms({...searchTerms, [key]: e.target.value})}
-                                  className="w-full px-2 py-1 border rounded text-gray-700 font-normal placeholder-gray-500"
-                                />
-                              )}
-                            </div>
-                          </th>
-                        ))}
-                        {isAdmin && <th className="border p-2 text-gray-900">Actions</th>}
-                      </tr>
-                    </thead>
-                  <tbody>
-                    {(Object.values(searchTerms).some(term => term !== '') ? filteredItems : items).map((item) => (
-                      <tr key={item.id}>
-                        <td className="border p-2 text-gray-900">{item.name}</td>
-                        <td className="border p-2 text-gray-900">{item.quantity}</td>
-                        <td className="border p-2 text-gray-900">{item.category}</td>
-                        <td className="border p-2 text-gray-900">{item.location}</td>
-                        <td className="border p-2 text-gray-900">{item.source}</td>
-                        <td className="border p-2">
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            onClick={() => handleBook(item)}
-                            className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 flex items-center gap-1"
-                          >
-                            <Calendar className="w-4 h-4" />
-                            Book
-                          </button>
-                          {isAdmin && (
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 flex items-center gap-1"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Edit
-                            </button>
-                          )}
+
+              {/* Search and Filters */}
+              <div className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {Object.keys(searchTerms).map(key => (
+                    <div key={key}>
+                      <div className="text-sm font-medium text-gray-700 mb-1 capitalize">{key}</div>
+                      {key === 'category' || key === 'location' ? (
+                        <AutocompleteInput
+                          value={searchTerms[key]}
+                          onChange={(value) => setSearchTerms({...searchTerms, [key]: value})}
+                          placeholder={`Search ${key}...`}
+                          items={items}
+                          field={key as 'category' | 'location'}
+                        />
+                      ) : (
+                        <div className="relative">
+                          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                          <input
+                            placeholder={`Search ${key}...`}
+                            value={searchTerms[key as keyof typeof searchTerms]}
+                            onChange={(e) => setSearchTerms({...searchTerms, [key]: e.target.value})}
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                          />
                         </div>
-                      </td>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Inventory Table */}
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {Object.keys(searchTerms).map(key => (
+                        <th key={key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {key}
+                        </th>
+                      ))}
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(Object.values(searchTerms).some(term => term !== '') ? filteredItems : items).map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.source}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleBook(item)}
+                              className="bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              Book
+                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+                              >
+                                <Edit className="w-4 h-4" />
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="mt-6">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={Math.ceil(
@@ -742,226 +785,240 @@ const InventorySystem = () => {
             </div>
           </div>
 
-          {isEditing && editingItem && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg w-full max-w-2xl">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">Edit Item</h3>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveEdit} className="grid grid-cols-1 gap-4">
-                  <input
-                    className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
-                    placeholder="Name"
-                    value={editingItem.name}
-                    onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
-                    required
-                  />
-                  <input
-                    className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
-                    placeholder="Quantity"
-                    type="number"
-                    value={editingItem.quantity}
-                    onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
-                    required
-                  />
-                  <AutocompleteInput
-                    value={editingItem.category}
-                    onChange={(value) => setEditingItem({...editingItem, category: value})}
-                    placeholder="Category"
-                    items={items}
-                    field="category"
-                  />
-                  <AutocompleteInput
-                    value={editingItem.location}
-                    onChange={(value) => setEditingItem({...editingItem, location: value})}
-                    placeholder="Location"
-                    items={items}
-                    field="location"
-                  />
-                  <input
-                    className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500"
-                    placeholder="Source"
-                    value={editingItem.source}
-                    onChange={(e) => setEditingItem({...editingItem, source: e.target.value})}
-                    required
-                  />
-                  
-                  <div className="flex justify-between mt-4">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleShowLogs(editingItem.id)}
-                        className="bg-blue-100 text-blue-700 px-4 py-2 rounded hover:bg-blue-200 flex items-center gap-2"
-                      >
-                        <ClipboardList className="w-4 h-4" />
-                        Logs
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(editingItem.id)}
-                        className="bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200 flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Item
-                      </button>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                      >
-                        Save Changes
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {showLogs && selectedItemId && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">Item History</h3>
-                  <button
-                    onClick={() => setShowLogs(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <div className="flex-1 overflow-auto">
-                  {logsLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                      <span className="text-gray-600">Loading logs...</span>
-                    </div>
-                  ) : logs.length === 0 ? (
-                    <div className="text-center text-gray-600 py-8">
-                      No history available for this item
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {logs.map((log) => (
-                        <div key={log.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                          <div className="flex justify-between text-sm text-gray-600">
-                            <span>{log.user_email}</span>
-                            <span>{new Date(log.timestamp).toLocaleString()}</span>
-                          </div>
-                          <div className="mt-1">
-                            {log.action_type === 'edit' ? (
-                              <p>
-                                Changed <span className="font-semibold">{log.field_name}</span> from{' '}
-                                <span className="text-red-600">{log.old_value}</span> to{' '}
-                                <span className="text-green-600">{log.new_value}</span>
-                              </p>
-                            ) : log.action_type === 'create' ? (
-                              <p>Created item</p>
-                            ) : (
-                              <p>Deleted item</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          {showBooking && selectedItem && (
-            <BookingModal
-              item={selectedItem}
-              onClose={() => setShowBooking(false)}
-              onBookingComplete={() => {
-                setShowBooking(false);
-                fetchItems();
-              }}
-            />
-          )}
-          {/* Delete All Modal */}
-          {showDeleteAll && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg w-full max-w-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-red-600">⚠️ Delete Entire Inventory</h3>
-                  <button
-                    onClick={() => {
-                      setShowDeleteAll(false);
-                      setDeleteConfirmation('');
-                    }}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-red-50 border-l-4 border-red-600 p-4">
-                    <p className="text-red-700">
-                      This action is irreversible. To confirm deletion, please type:
-                    </p>
-                    <p className="font-mono bg-gray-100 p-2 mt-2 text-sm">
-                      {DELETION_PHRASE}
-                    </p>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={deleteConfirmation}
-                    onChange={(e) => setDeleteConfirmation(e.target.value)}
-                    placeholder="Type confirmation phrase here"
-                    className="w-full px-3 py-2 border rounded"
-                  />
-
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => {
-                        setShowDeleteAll(false);
-                        setDeleteConfirmation('');
-                      }}
-                      className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDeleteAllInventory}
-                      disabled={deleteConfirmation !== DELETION_PHRASE}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Delete All Items
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Admin Delete All Section */}
           {isAdmin && (
             <div className="text-right mt-8">
               <button
                 onClick={() => setShowDeleteAll(true)}
-                className="text-xs text-gray-400 hover:text-red-600 underline"
+                className="text-xs text-gray-400 hover:text-red-600 underline transition-colors"
               >
                 Delete All Inventory
               </button>
             </div>
           )}
-        </>
+        </div>
+      )}
+
+      {/* Modals */}
+      {/* Edit Modal */}
+      {isEditing && editingItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl m-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Edit Item</h3>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <input
+                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                  placeholder="Name"
+                  value={editingItem.name}
+                  onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                  required
+                />
+                <input
+                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                  placeholder="Quantity"
+                  type="number"
+                  value={editingItem.quantity}
+                  onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
+                  required
+                />
+                <AutocompleteInput
+                  value={editingItem.category}
+                  onChange={(value) => setEditingItem({...editingItem, category: value})}
+                  placeholder="Category"
+                  items={items}
+                  field="category"
+                />
+                <AutocompleteInput
+                  value={editingItem.location}
+                  onChange={(value) => setEditingItem({...editingItem, location: value})}
+                  placeholder="Location"
+                  items={items}
+                  field="location"
+                />
+                <input
+                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                  placeholder="Source"
+                  value={editingItem.source}
+                  onChange={(e) => setEditingItem({...editingItem, source: e.target.value})}
+                  required
+                />
+                
+                <div className="flex justify-between pt-4">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleShowLogs(editingItem.id)}
+                      className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2"
+                    >
+                      <ClipboardList className="w-4 h-4" />
+                      Logs
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(editingItem.id)}
+                      className="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Item
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logs Modal */}
+      {showLogs && selectedItemId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl m-4 max-h-[80vh] flex flex-col">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Item History</h3>
+                <button
+                  onClick={() => setShowLogs(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="overflow-y-auto">
+                {logsLoading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <span className="text-gray-600">Loading logs...</span>
+                  </div>
+                ) : logs.length === 0 ? (
+                  <div className="text-center text-gray-600 py-8">
+                    No history available for this item
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {logs.map((log) => (
+                      <div key={log.id} className="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded-r-lg">
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span className="font-medium">{log.user_email}</span>
+                          <span>{new Date(log.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div className="mt-2">
+                          {log.action_type === 'edit' ? (
+                            <p className="text-gray-700">
+                              Changed <span className="font-semibold">{log.field_name}</span> from{' '}
+                              <span className="text-red-600">{log.old_value}</span> to{' '}
+                              <span className="text-green-600">{log.new_value}</span>
+                            </p>
+                          ) : log.action_type === 'create' ? (
+                            <p className="text-green-700">Created item</p>
+                          ) : (
+                            <p className="text-red-700">Deleted item</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {showBooking && selectedItem && (
+        <BookingModal
+          item={selectedItem}
+          onClose={() => setShowBooking(false)}
+          onBookingComplete={() => {
+            setShowBooking(false);
+            fetchItems();
+          }}
+        />
+      )}
+
+      {/* Delete All Modal */}
+      {showDeleteAll && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md m-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-red-600">⚠️ Delete Entire Inventory</h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteAll(false);
+                    setDeleteConfirmation('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-r-lg">
+                  <p className="text-red-700">
+                    This action is irreversible. To confirm deletion, please type:
+                  </p>
+                  <p className="font-mono bg-gray-100 p-2 mt-2 text-sm rounded">
+                    {DELETION_PHRASE}
+                  </p>
+                </div>
+
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Type confirmation phrase here"
+                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-red-200 focus:border-red-500 transition-all"
+                />
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setShowDeleteAll(false);
+                      setDeleteConfirmation('');
+                    }}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAllInventory}
+                    disabled={deleteConfirmation !== DELETION_PHRASE}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Delete All Items
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

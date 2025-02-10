@@ -97,15 +97,36 @@ const UserManagement = () => {  // Add this line to define the component
     try {
       console.log("Attempting to update user role:", { userId, newRole });
       
+      // Get the user's email first
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .single();
+  
+      if (userError) throw userError;
+  
+      // Update the role
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
         .eq('id', userId);
   
-      if (error) {
-        console.error('Error updating role:', error);
-        setError('Failed to update user role');
-        return;
+      if (error) throw error;
+  
+      // If role was changed to 'user' (approved), send email
+      if (newRole === 'user') {
+        const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
+          body: { 
+            email: userData.email,
+            appUrl: window.location.origin
+          }
+        });
+  
+        if (emailError) {
+          console.error('Error sending approval email:', emailError);
+          // Don't throw, as the role update was successful
+        }
       }
   
       console.log("Role update successful");
