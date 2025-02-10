@@ -27,6 +27,10 @@ const AuthForm = () => {
         const { data: { user }, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            // Configure the email redirect to your new verification success page
+            emailRedirectTo: `${window.location.origin}/verify-success`
+          }
         });
         
         console.log("Signup result:", { user, signUpError });
@@ -37,7 +41,7 @@ const AuthForm = () => {
         }
   
         if (user) {
-          setMessage('Account created! Please check your email for verification and wait for admin approval.');
+          setMessage('Account created! Please check your email for verification.');
         } else {
           setMessage('Something went wrong. Please try again.');
         }
