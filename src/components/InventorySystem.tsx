@@ -395,15 +395,16 @@ const InventorySystem = () => {
         const fields: (keyof Item)[] = ['name', 'quantity', 'category', 'location', 'source'];
         
         for (const field of fields) {
-          if (originalItem[field] !== editingItem[field]) {
+          if (originalItem[field]?.toString() !== editingItem[field]?.toString()) {
             changes.push({
               item_id: editingItem.id,
               user_id: user.id,
+              user_email: user.email,
               action_type: 'edit',
               field_name: field,
               old_value: originalItem[field]?.toString() || '',
               new_value: editingItem[field]?.toString() || '',
-              user_email: user.email
+              timestamp: new Date().toISOString()
             });
           }
         }
@@ -598,9 +599,24 @@ const InventorySystem = () => {
   });
 
   const handleShowLogs = async (itemId: string) => {
-    setSelectedItemId(itemId);
-    setShowLogs(true);
-    await fetchItemLogs(itemId);
+    setLogsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('inventory_logs')
+        .select('*')
+        .eq('item_id', itemId)
+        .order('timestamp', { ascending: false });
+  
+      if (error) throw error;
+      
+      setSelectedItemId(itemId);
+      setShowLogs(true);
+      setLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    } finally {
+      setLogsLoading(false);
+    }
   };
   
   const handleBook = (item: Item) => {
