@@ -49,6 +49,7 @@ const UserManagement = () => {  // Add this line to define the component
       if (!supabaseAdmin) {
         throw new Error('Admin client not configured');
       }
+      
       // First get all auth users using admin client
       const { data: { users }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
       if (authError) throw authError;
@@ -58,11 +59,13 @@ const UserManagement = () => {  // Add this line to define the component
         .from('profiles')
         .select('id');
       if (profilesError) throw profilesError;
-
+  
       // Find users without profiles
       const existingProfileIds = new Set(existingProfiles?.map(p => p.id));
-      const usersWithoutProfiles = users?.filter((user: SupabaseUser) => !existingProfileIds.has(user.id));
-
+      const usersWithoutProfiles = users?.filter((user: SupabaseUser) => 
+        !existingProfileIds.has(user.id)
+      );
+  
       // Create missing profiles
       if (usersWithoutProfiles?.length) {
         const { error: insertError } = await supabase
@@ -77,17 +80,17 @@ const UserManagement = () => {  // Add this line to define the component
           );
         if (insertError) throw insertError;
       }
-
+  
       // Refresh the users list
       await fetchUsers();
     } catch (error) {
-        console.error('Error syncing profiles - Full error:', error);
-        if (error instanceof Error) {
-          setError(`Failed to sync user profiles: ${error.message}`);
-        } else {
-          setError('Failed to sync user profiles');
-        }
+      console.error('Error syncing profiles - Full error:', error);
+      if (error instanceof Error) {
+        setError(`Failed to sync user profiles: ${error.message}`);
+      } else {
+        setError('Failed to sync user profiles');
       }
+    }
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {

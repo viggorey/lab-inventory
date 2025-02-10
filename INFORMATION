@@ -54,29 +54,68 @@ WHERE auth.users.email = 'vr382@cam.ac.uk';
 
 
 
-# DELETING AN ADMIN
+# DELETING A USER
 
--- 1. First get or note the admin's user ID
--- In your case it's: '1cecfa29-60b0-404b-866d-d5ce48703cc3'
+-- Function to completely remove a user
+CREATE OR REPLACE FUNCTION delete_user_and_profile(user_uuid UUID)
+RETURNS VOID AS $$
+BEGIN
+  -- Delete user's bookings
+  DELETE FROM inventory_bookings WHERE user_id = user_uuid;
+  
+  -- Delete user's inventory logs
+  DELETE FROM inventory_logs WHERE user_id = user_uuid;
+  
+  -- Delete user's profile
+  DELETE FROM profiles WHERE id = user_uuid;
+  
+  -- Delete the user from auth.users
+  DELETE FROM auth.users WHERE id = user_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Update any inventory items created by this admin to be owned by another admin
--- Replace 'new-admin-id' with the ID of another admin user
-UPDATE inventory 
-SET created_by = 'new-admin-id' 
-WHERE created_by = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
+-- Usage (replace with actual UUID)
+SELECT delete_user_and_profile('38987950-23f5-4092-891a-c65c54688fbb');
 
--- 3. Delete their logs
-DELETE FROM inventory_logs 
-WHERE user_id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
 
--- 4. Delete their bookings
-DELETE FROM inventory_bookings 
-WHERE user_id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
 
--- 5. Delete their profile
-DELETE FROM profiles 
-WHERE id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
+# DELETING admin (will all be in 'deleted user' category)
 
--- 6. Finally delete the user
-DELETE FROM auth.users 
-WHERE id = '1cecfa29-60b0-404b-866d-d5ce48703cc3';
+-- Function to completely remove a user
+CREATE OR REPLACE FUNCTION delete_user_and_profile(user_uuid UUID)
+RETURNS VOID AS $$
+DECLARE 
+  system_user_id UUID;
+BEGIN
+  -- First, ensure a system user exists
+  INSERT INTO auth.users (id, email)
+  VALUES ('00000000-0000-0000-0000-000000000000', 'system@deleted.user')
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO profiles (id, email, role)
+  VALUES ('00000000-0000-0000-0000-000000000000', 'system@deleted.user', 'admin')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Delete user's bookings
+  DELETE FROM inventory_bookings WHERE user_id = user_uuid;
+  
+  -- Delete user's inventory logs
+  DELETE FROM inventory_logs WHERE user_id = user_uuid;
+  
+  -- Replace user references in inventory with system user
+  UPDATE inventory 
+  SET 
+    created_by = '00000000-0000-0000-0000-000000000000',
+    updated_by = '00000000-0000-0000-0000-000000000000'
+  WHERE created_by = user_uuid OR updated_by = user_uuid;
+  
+  -- Delete user's profile
+  DELETE FROM profiles WHERE id = user_uuid;
+  
+  -- Delete the user from auth.users
+  DELETE FROM auth.users WHERE id = user_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Usage (replace with actual UUID)
+SELECT delete_user_and_profile('d9318603-aa1d-4e2d-bc9f-5a6fd27164fb');
