@@ -67,13 +67,13 @@ const BookingsList = () => {
     <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
       <div className="flex items-center gap-2 mb-4">
         <Calendar className="w-5 h-5 text-blue-500" />
-        <h2 className="text-xl font-bold">Your Bookings</h2>
+        <h2 className="text-xl font-bold text-gray-900">Your Bookings</h2>
       </div>
 
       {loading ? (
-        <div className="text-center py-4">Loading bookings...</div>
+        <div className="text-center py-4 text-gray-900">Loading bookings...</div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-4 text-gray-500">No active bookings</div>
+        <div className="text-center py-4 text-gray-900">No active bookings</div>
       ) : (
         <div className="space-y-4">
           {bookings.map((booking) => (
