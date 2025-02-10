@@ -125,7 +125,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
       if (!user) throw new Error('No user found');
   
       // Create the booking
-      const { data: bookingData, error: bookingError } = await supabase
+      const { error: bookingError } = await supabase
         .from('inventory_bookings')
         .insert({
           item_id: item.id,
