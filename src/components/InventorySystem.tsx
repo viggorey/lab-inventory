@@ -450,24 +450,6 @@ const InventorySystem = () => {
   };
   
 
-  const fetchItemLogs = async (itemId: string) => {
-    setLogsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('inventory_logs')
-        .select('*')
-        .eq('item_id', itemId)
-        .order('timestamp', { ascending: false });
-  
-      if (error) throw error;
-      setLogs(data || []);
-    } catch (error) {
-      console.error('Error fetching logs:', error);
-    } finally {
-      setLogsLoading(false);
-    }
-  };
-
   // Handle Excel export
   const handleExport = () => {
     const ws = XLSX.utils.json_to_sheet(allItems);
