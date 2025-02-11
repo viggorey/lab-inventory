@@ -29,7 +29,10 @@ const AuthForm = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/verify-success`
+            emailRedirectTo: `${window.location.origin}/verify-success`,
+            data: {
+              email_confirmation_required: true
+            }
           }
         });
         

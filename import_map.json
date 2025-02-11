@@ -1,6 +1,6 @@
 {
-    "imports": {
-      "$std/": "https://deno.land/std@0.197.0/",
-      "$smtp/": "https://deno.land/x/smtp@v0.7.0/"
-    }
+  "imports": {
+    "$std/": "https://deno.land/std@0.197.0/",
+    "$smtp/": "https://deno.land/x/smtp@v0.7.0/"
   }
+}

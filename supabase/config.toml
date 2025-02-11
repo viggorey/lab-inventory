@@ -279,3 +279,25 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+[auth.email.smtp]
+enabled = true
+host = "smtp.gmail.com"
+port = 587
+user = "insectsbiomechanicsgroup@gmail.com" 
+pass = "jltc ukew knhy hlcu" 
+sender_name = "Lab Inventory System"
+admin_email = "insectsbiomechanicsgroup@gmail.com" 
+
+
+[auth.email.template.confirmation]
+subject = "Verify your email for Lab Inventory System"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.approved]
+subject = "Your Lab Inventory account has been approved"
+content_path = "./supabase/templates/approved.html"
+
+[auth.email.template.denied]
+subject = "Update on your Lab Inventory account request"
+content_path = "./supabase/templates/denied.html"

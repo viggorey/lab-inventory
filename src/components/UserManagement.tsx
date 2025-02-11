@@ -101,6 +101,40 @@ const UserManagement = () => {  // Add this line to define the component
         .eq('id', userId);
   
       if (error) throw error;
+  
+      // Get user email
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .single();
+  
+      if (userError || !userData?.email) {
+        console.error('Error fetching user email:', userError);
+        throw new Error('Could not fetch user email');
+      }
+  
+      // Send email using Edge Function
+      const response = await fetch(
+        'https://[YOUR-PROJECT-REF].supabase.co/functions/v1/send-status-email',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            email: userData.email,
+            status: newRole === 'user' ? 'approved' : 'denied'
+          })
+        }
+      );
+  
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+  
       await fetchUsers();
     } catch (error) {
       console.error('Error:', error);
