@@ -74,6 +74,8 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
   </tr>
 ));
 
+InventoryRow.displayName = 'InventoryRow';
+
 const InventorySystem = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [isClient, setIsClient] = useState(false);
