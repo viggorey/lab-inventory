@@ -366,12 +366,21 @@ const InventorySystem = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
   
+      console.log('Starting edit for item:', editingItem.id);
+  
       // Get the original item to compare changes
-      const { data: originalItem } = await supabase
+      const { data: originalItem, error: originalError } = await supabase
         .from('inventory')
         .select('*')
         .eq('id', editingItem.id)
         .single();
+  
+      if (originalError) {
+        console.error('Error fetching original item:', originalError);
+        throw originalError;
+      }
+  
+      console.log('Original item:', originalItem);
   
       // Update the item
       const { error: updateError } = await supabase
@@ -396,7 +405,7 @@ const InventorySystem = () => {
         
         for (const field of fields) {
           if (originalItem[field]?.toString() !== editingItem[field]?.toString()) {
-            changes.push({
+            const logEntry = {
               item_id: editingItem.id,
               user_id: user.id,
               user_email: user.email,
@@ -405,16 +414,24 @@ const InventorySystem = () => {
               old_value: originalItem[field]?.toString() || '',
               new_value: editingItem[field]?.toString() || '',
               timestamp: new Date().toISOString()
-            });
+            };
+            changes.push(logEntry);
+            console.log('Created log entry:', logEntry);
           }
         }
   
         if (changes.length > 0) {
-          const { error: logError } = await supabase
+          console.log('Inserting log entries:', changes);
+          const { data: logData, error: logError } = await supabase
             .from('inventory_logs')
-            .insert(changes);
+            .insert(changes)
+            .select();
   
-          if (logError) throw logError;
+          if (logError) {
+            console.error('Error creating logs:', logError);
+            throw logError;
+          }
+          console.log('Successfully created logs:', logData);
         }
       }
   
@@ -433,6 +450,23 @@ const InventorySystem = () => {
   };
   
 
+  const fetchItemLogs = async (itemId: string) => {
+    setLogsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('inventory_logs')
+        .select('*')
+        .eq('item_id', itemId)
+        .order('timestamp', { ascending: false });
+  
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
 
   // Handle Excel export
   const handleExport = () => {
@@ -584,13 +618,19 @@ const InventorySystem = () => {
   const handleShowLogs = async (itemId: string) => {
     setLogsLoading(true);
     try {
+      console.log('Fetching logs for item:', itemId);
       const { data, error } = await supabase
         .from('inventory_logs')
         .select('*')
         .eq('item_id', itemId)
         .order('timestamp', { ascending: false });
   
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching logs:', error);
+        throw error;
+      }
+      
+      console.log('Fetched logs:', data);
       
       setSelectedItemId(itemId);
       setShowLogs(true);
