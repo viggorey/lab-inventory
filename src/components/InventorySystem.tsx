@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, memo} from 'react';
 import { Download, Upload, LogOut, Box, Search } from 'lucide-react';
+import { uniq } from 'lodash';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
@@ -24,6 +25,12 @@ interface InventoryLog {
   old_value?: string;
   new_value?: string;
   timestamp: Date;
+}
+
+interface SimilarityWarning {
+  similarItems: string[];
+  similarCategories: string[];
+  show: boolean;
 }
 
 const formatFileSize = (bytes: number): string => {
@@ -91,7 +98,11 @@ const InventorySystem = () => {
     location: '',
     source: ''
   });
-
+  const [similarityWarning, setSimilarityWarning] = useState<SimilarityWarning>({
+    similarItems: [],
+    similarCategories: [],
+    show: false
+  });
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: '',
@@ -221,23 +232,33 @@ const InventorySystem = () => {
     return dp[m][n];
   }
   
-  function findSimilarItems(newItemName: string, existingItems: Item[], threshold: number = 0.6): Item[] {
-    const normalizedNewName = newItemName.toLowerCase().trim();
-    const newNameWords = normalizedNewName.split(/\s+/).sort();
+  function findSimilarValues(
+    newValue: string, 
+    existingValues: string[], 
+    threshold: number = 0.6
+  ): string[] {
+    const normalizedNewValue = newValue.toLowerCase().trim();
+    const newValueWords = normalizedNewValue.split(/\s+/).sort();
     
-    return existingItems.filter(item => {
-      const normalizedExistingName = item.name.toLowerCase().trim();
-      const existingNameWords = normalizedExistingName.split(/\s+/).sort();
+    return existingValues.filter(existingValue => {
+      const normalizedExistingValue = existingValue.toLowerCase().trim();
+      
+      // Skip exact matches (case-insensitive)
+      if (normalizedNewValue === normalizedExistingValue) {
+        return false;
+      }
+      
+      const existingValueWords = normalizedExistingValue.split(/\s+/).sort();
       
       // Check word permutations
-      const wordPermutationSimilarity = newNameWords.length === existingNameWords.length &&
-        newNameWords.every((word, i) => 
-          levenshteinDistance(word, existingNameWords[i]) <= 2
+      const wordPermutationSimilarity = newValueWords.length === existingValueWords.length &&
+        newValueWords.every((word, i) => 
+          levenshteinDistance(word, existingValueWords[i]) <= 2
         );
       
       // Check overall string similarity
-      const maxLength = Math.max(normalizedNewName.length, normalizedExistingName.length);
-      const distance = levenshteinDistance(normalizedNewName, normalizedExistingName);
+      const maxLength = Math.max(normalizedNewValue.length, normalizedExistingValue.length);
+      const distance = levenshteinDistance(normalizedNewValue, normalizedExistingValue);
       const stringSimilarity = (maxLength - distance) / maxLength;
       
       return wordPermutationSimilarity || stringSimilarity >= threshold;
@@ -249,64 +270,59 @@ const InventorySystem = () => {
     if (!isAdmin) return;
   
     try {
-      // Check for similar items
-      const similarItems = findSimilarItems(newItem.name, items);
+      const similarItems = findSimilarValues(newItem.name, items.map(item => item.name));
+      const similarCategories = findSimilarValues(
+        newItem.category, 
+        uniq(items.map(item => item.category))
+      );
       
-      if (similarItems.length > 0) {
-        const confirmAdd = window.confirm(
-          `Similar items found:\n${similarItems.map(item => 
-            `- ${item.name} (${item.category})`
-          ).join('\n')}\n\nDo you still want to add this item?`
-        );
-        if (!confirmAdd) return;
+      if (similarItems.length > 0 || similarCategories.length > 0) {
+        setSimilarityWarning({
+          similarItems,
+          similarCategories,
+          show: true
+        });
+        return;
       }
   
+      await addItem(); // We'll move the item addition logic to a separate function
+    } catch (error) {
+      console.error('Error details:', error);
+      alert('Failed to add item. Please try again.');
+    }
+  };
+  
+  // Separate function for adding the item
+  const addItem = async () => {
+    try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
   
-      // Insert new item
       const { data: newItemData, error: insertError } = await supabase
         .from('inventory')
         .insert([{ ...newItem, created_by: user.id }])
         .select()
         .single();
   
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw insertError;
+      if (insertError) throw insertError;
+  
+      // Create log entry
+      const { error: logError } = await supabase
+        .from('inventory_logs')
+        .insert([{
+          item_id: newItemData.id,
+          user_id: user.id,
+          user_email: user.email,
+          action_type: 'create',
+          timestamp: new Date().toISOString()
+        }]);
+  
+      if (logError) {
+        console.error('Log creation error:', logError);
       }
   
-      // If we get here, item was created successfully
-      console.log('Item created:', newItemData);
+      await Promise.all([fetchItems(), fetchItems(true)]);
   
-      try {
-        // Create log entry
-        const { error: logError } = await supabase
-          .from('inventory_logs')
-          .insert([{  // Note the array wrapper
-            item_id: newItemData.id,
-            user_id: user.id,
-            user_email: user.email,
-            action_type: 'create',
-            timestamp: new Date().toISOString()
-          }]);
-  
-        if (logError) {
-          console.error('Log creation error:', logError);
-          // Don't throw here, we still want to update the UI
-        }
-      } catch (logError) {
-        console.error('Log creation failed:', logError);
-        // Don't throw here either
-      }
-  
-      // Update UI regardless of log success
-      await Promise.all([
-        fetchItems(),
-        fetchItems(true)
-      ]);
-  
-      // Reset form
       setNewItem({
         name: '',
         quantity: '',
@@ -314,8 +330,9 @@ const InventorySystem = () => {
         location: '',
         source: ''
       });
-
-      } catch (error) {
+  
+      setSimilarityWarning({ similarItems: [], similarCategories: [], show: false });
+    } catch (error) {
       console.error('Error details:', error);
       alert('Failed to add item. Please try again.');
     }
@@ -977,6 +994,64 @@ const InventorySystem = () => {
                   </div>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Similarity Warning Modal */}
+      {similarityWarning.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md m-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-amber-600">⚠️ Similar Items Found</h3>
+                <button
+                  onClick={() => setSimilarityWarning({ ...similarityWarning, show: false })}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {similarityWarning.similarItems.length > 0 && (
+                  <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-amber-800 mb-2">Similar Items:</h4>
+                    <ul className="list-disc list-inside text-amber-700 space-y-1">
+                      {similarityWarning.similarItems.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {similarityWarning.similarCategories.length > 0 && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-blue-800 mb-2">Similar Categories:</h4>
+                    <ul className="list-disc list-inside text-blue-700 space-y-1">
+                      {similarityWarning.similarCategories.map((category, index) => (
+                        <li key={index}>{category}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    onClick={() => setSimilarityWarning({ ...similarityWarning, show: false })}
+                    className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addItem}
+                    className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                  >
+                    Add Anyway
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
