@@ -45,15 +45,29 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    onChange(inputValue);
-  
-    // Show suggestions immediately instead of waiting for 3 characters
-    const filtered = uniqueValues.filter((item: string) =>
-      item.toLowerCase().includes(inputValue.toLowerCase())
-    );
-    setSuggestions(filtered);
-    setShowSuggestions(true);
+    try {
+      const inputValue = e.target.value;
+      onChange(inputValue);
+      
+      // Safely handle null or undefined values
+      const filtered = uniqueValues.filter((item: string) => {
+        if (!item) return false;
+        return item.toLowerCase().includes(inputValue.toLowerCase());
+      });
+      
+      setSuggestions(filtered);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Error in autocomplete:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      // Add more specific error handling
+      if (error instanceof TypeError) {
+        console.error('Type error in autocomplete:', error.message);
+      } else {
+        console.error('Unexpected error in autocomplete:', error);
+      }
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {

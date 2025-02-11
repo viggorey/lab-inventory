@@ -83,31 +83,38 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
     if (startDate < now) {
       return { valid: false, message: "Cannot book dates in the past" };
     }
-
+  
     if (endDate <= startDate) {
       return { valid: false, message: "End time must be after start time" };
     }
-
+  
     if (requestedQuantity <= 0) {
       return { valid: false, message: "Please select a valid quantity" };
     }
-
+  
+    // Check overlapping bookings and available quantity
     const overlappingBookings = existingBookings.filter(booking => {
       const bookingStart = new Date(booking.start_datetime);
       const bookingEnd = new Date(booking.end_datetime);
       return (startDate <= bookingEnd && endDate >= bookingStart);
     });
-
-    const totalBookedQuantity = overlappingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+  
+    // Calculate total quantity booked for the overlapping period
+    let maxBookedQuantity = 0;
+    overlappingBookings.forEach(booking => {
+      maxBookedQuantity = Math.max(maxBookedQuantity, booking.quantity);
+    });
+  
     const availableQuantity = parseInt(item.quantity);
-
-    if (totalBookedQuantity + requestedQuantity > availableQuantity) {
+    const remainingQuantity = availableQuantity - maxBookedQuantity;
+  
+    if (requestedQuantity > remainingQuantity) {
       return {
         valid: false,
-        message: `Only ${availableQuantity - totalBookedQuantity} items available for this time period`
+        message: `Only ${remainingQuantity} items available for this time period`
       };
     }
-
+  
     return { valid: true, message: "" };
   };
 

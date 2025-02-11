@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo} from 'react';
 import { Download, Upload, LogOut, Box, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
@@ -39,6 +39,40 @@ const formatFileSize = (bytes: number): string => {
   return `${Math.round(size)}${units[unitIndex]}`;
 };
 
+const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
+  item: Item;
+  isAdmin: boolean;
+  onEdit: (item: Item) => void;
+  onBook: (item: Item) => void;
+}) => (
+  <tr className="hover:bg-gray-50 transition-colors">
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.source}</td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm">
+      <div className="flex gap-2">
+        <button
+          onClick={() => onBook(item)}
+          className="bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+        >
+          <Calendar className="w-4 h-4" />
+          Book
+        </button>
+        {isAdmin && (
+          <button
+            onClick={() => onEdit(item)}
+            className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+          >
+            <Edit className="w-4 h-4" />
+            Edit
+          </button>
+        )}
+      </div>
+    </td>
+  </tr>
+));
 
 const InventorySystem = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -809,33 +843,13 @@ const InventorySystem = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {(Object.values(searchTerms).some(term => term !== '') ? filteredItems : items).map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.source}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleBook(item)}
-                              className="bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
-                            >
-                              <Calendar className="w-4 h-4" />
-                              Book
-                            </button>
-                            {isAdmin && (
-                              <button
-                                onClick={() => handleEdit(item)}
-                                className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
-                              >
-                                <Edit className="w-4 h-4" />
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                      <InventoryRow 
+                        key={item.id}
+                        item={item}
+                        isAdmin={isAdmin}
+                        onEdit={handleEdit}
+                        onBook={handleBook}
+                      />
                     ))}
                   </tbody>
                 </table>

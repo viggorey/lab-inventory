@@ -46,12 +46,6 @@ export default function VerifySuccessPage() {
               </p>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-blue-700 text-sm">
-                You will receive an email once your account has been reviewed by an administrator.
-              </p>
-            </div>
-
             <div className="space-y-4">
               <button
                 onClick={() => router.push('/')}
