@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { UserCheck, UserX, User, ChevronDown, ChevronUp } from 'lucide-react';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
