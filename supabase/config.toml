@@ -97,9 +97,14 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "https://lab-inventory-bay.vercel.app/"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "https://lab-inventory-bay.vercel.app/",
+  "https://lab-inventory-bay.vercel.app/verify-success",
+  "http://localhost:3000",
+  "http://localhost:3000/verify-success"
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
@@ -124,27 +129,17 @@ password_requirements = ""
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
-double_confirm_changes = true
+double_confirm_changes = false
 # If enabled, users need to confirm their email address before signing in.
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "5s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
-
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -280,24 +275,5 @@ s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
 
-[auth.email.smtp]
-enabled = true
-host = "smtp.gmail.com"
-port = 587
-user = "insectsbiomechanicsgroup@gmail.com" 
-pass = "jltc ukew knhy hlcu" 
-sender_name = "Lab Inventory System"
-admin_email = "insectsbiomechanicsgroup@gmail.com" 
 
 
-[auth.email.template.confirmation]
-subject = "Verify your email for Lab Inventory System"
-content_path = "./supabase/templates/confirmation.html"
-
-[auth.email.template.approved]
-subject = "Your Lab Inventory account has been approved"
-content_path = "./supabase/templates/approved.html"
-
-[auth.email.template.denied]
-subject = "Update on your Lab Inventory account request"
-content_path = "./supabase/templates/denied.html"

@@ -23,6 +23,7 @@ const UserManagement = () => {  // Add this line to define the component
     setLoading(true);
     try {
       setError(null);
+      // Get all profiles
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -34,7 +35,6 @@ const UserManagement = () => {  // Add this line to define the component
         return;
       }
   
-      console.log('Fetched profiles:', profiles);
       setUsers(profiles || []);
     } catch (error) {
       console.error('Error:', error);
@@ -44,57 +44,32 @@ const UserManagement = () => {  // Add this line to define the component
     }
   };
   
-  const syncMissingProfiles = async () => {
+  // Replace syncMissingProfiles with this simpler version
+  const syncUsers = async () => {
     try {
-      if (!supabaseAdmin) {
-        throw new Error('Admin client not configured');
-      }
-      
-      // First get all auth users using admin client
-      const { data: { users }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-      if (authError) throw authError;
-      
-      // Get existing profiles
-      const { data: existingProfiles, error: profilesError } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+  
+      // Fetch auth users through your profiles table
+      const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id');
-      if (profilesError) throw profilesError;
+        .select('*')
+        .order('created_at', { ascending: false });
   
-      // Find users without profiles
-      const existingProfileIds = new Set(existingProfiles?.map(p => p.id));
-      const usersWithoutProfiles = users?.filter((user: SupabaseUser) => 
-        !existingProfileIds.has(user.id)
-      );
-  
-      // Create missing profiles
-      if (usersWithoutProfiles?.length) {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert(
-            usersWithoutProfiles.map((user: SupabaseUser) => ({
-              id: user.id,
-              email: user.email,
-              role: 'pending',
-              created_at: new Date().toISOString()
-            }))
-          );
-        if (insertError) throw insertError;
-      }
+      if (error) throw error;
   
       // Refresh the users list
-      await fetchUsers();
+      setUsers(profiles || []);
+      
     } catch (error) {
-      console.error('Error syncing profiles - Full error:', error);
-      if (error instanceof Error) {
-        setError(`Failed to sync user profiles: ${error.message}`);
-      } else {
-        setError('Failed to sync user profiles');
-      }
+      console.error('Error syncing users:', error);
+      setError('Failed to sync users');
     }
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
+      // First update the user's role
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
@@ -114,9 +89,9 @@ const UserManagement = () => {  // Add this line to define the component
         throw new Error('Could not fetch user email');
       }
   
-      // Send email using Edge Function
+      // Send email notification
       const response = await fetch(
-        'https://[YOUR-PROJECT-REF].supabase.co/functions/v1/send-status-email',
+        'https://lmijffjvwpfmvccbgiyr.supabase.co/functions/v1/send-status-email',
         {
           method: 'POST',
           headers: {
@@ -125,14 +100,15 @@ const UserManagement = () => {  // Add this line to define the component
           },
           body: JSON.stringify({
             email: userData.email,
-            status: newRole === 'user' ? 'approved' : 'denied'
+            type: newRole === 'user' ? 'approved' : 'denied',
+            data: {} // Add any additional data if needed
           })
         }
       );
   
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message);
+        console.error('Email sending error:', error);
       }
   
       await fetchUsers();
@@ -167,7 +143,7 @@ const UserManagement = () => {  // Add this line to define the component
           </button>
         </div>
         <button
-          onClick={syncMissingProfiles}
+          onClick={syncUsers}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Sync Users

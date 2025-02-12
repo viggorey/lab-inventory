@@ -24,33 +24,46 @@ const AuthForm = () => {
         });
         if (error) throw error;
       } else {
-        console.log("Starting signup process...");
-        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/verify-success`,
+            emailRedirectTo: undefined,
             data: {
-              email_confirmation_required: true
+              role: 'pending'
             }
           }
         });
-        
-        console.log("Signup result:", { user, signUpError });
+  
+        console.log('Signup response:', JSON.stringify(data, null, 2));
   
         if (signUpError) {
-          console.error("Signup error details:", signUpError);
+          console.error('Signup error:', JSON.stringify(signUpError, null, 2));
           throw signUpError;
         }
   
-        if (user) {
-          setMessage('Account created! Please check your email for verification.');
-        } else {
-          setMessage('Something went wrong. Please try again.');
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: email,
+                role: 'pending'
+              }
+            ])
+            .single();
+  
+          if (profileError) {
+            console.error('Profile error:', JSON.stringify(profileError, null, 2));
+            throw profileError;
+          }
+  
+          setMessage('Account created! Please wait for admin approval.');
         }
       }
     } catch (error: unknown) {
-      console.error('Auth error:', error);
+      console.error('Complete error object:', error);
       if (error instanceof Error) {
         setMessage(error.message);
       } else {
