@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, PostgrestError } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -26,7 +26,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Add error handling wrapper
-export const handleSupabaseError = (error: any) => {
+export const handleSupabaseError = (error: PostgrestError | null) => {
   if (error) {
     console.error('Supabase Error:', {
       message: error.message,

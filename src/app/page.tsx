@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { supabase, handleSupabaseError } from '@/lib/supabase';  
+import { supabase } from '@/lib/supabase';  
 import type { User } from '@supabase/supabase-js';
 
 const AuthForm = dynamic(() => import('@/components/AuthForm'), { ssr: false });

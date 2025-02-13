@@ -45,28 +45,6 @@ const UserManagement = () => {
     }
   };
   
-  // Replace syncMissingProfiles with this simpler version
-  const syncUsers = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-  
-      // Fetch auth users through your profiles table
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-  
-      if (error) throw error;
-  
-      // Refresh the users list
-      setUsers(profiles || []);
-      
-    } catch (error) {
-      console.error('Error syncing users:', error);
-      setError('Failed to sync users');
-    }
-  };
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
