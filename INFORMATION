@@ -31,92 +31,37 @@ supabase link --project-ref YOUR_PROJECT_REF (lmijffjvwpfmvccbgiyr) # where code
 
 
 
-## Make first admin (register on website>supabase SQL editor and run this)
--- First, lets verify the user exists and get their UUID
-SELECT id, email 
-FROM auth.users 
-WHERE email = 'vr382@cam.ac.uk';
 
--- After confirming the ID, update their role to admin
-UPDATE profiles 
-SET role = 'admin' 
-WHERE id = (
-  SELECT id 
-  FROM auth.users 
-  WHERE email = 'vr382@cam.ac.uk'
-);
 
--- Verify the change
-SELECT profiles.*, auth.users.email 
-FROM profiles 
-JOIN auth.users ON profiles.id = auth.users.id 
-WHERE auth.users.email = 'vr382@cam.ac.uk';
+
 
 
 
 
 ## DELETING A USER
 
--- Function to completely remove a user
-CREATE OR REPLACE FUNCTION delete_user_and_profile(user_uuid UUID)
-RETURNS VOID AS $$
-BEGIN
-  -- Delete user's bookings
-  DELETE FROM inventory_bookings WHERE user_id = user_uuid;
-  
-  -- Delete user's inventory logs
-  DELETE FROM inventory_logs WHERE user_id = user_uuid;
-  
-  -- Delete user's profile
-  DELETE FROM profiles WHERE id = user_uuid;
-  
-  -- Delete the user from auth.users
-  DELETE FROM auth.users WHERE id = user_uuid;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+BEGIN;
 
--- Usage (replace with actual UUID)
-SELECT delete_user_and_profile('38987950-23f5-4092-891a-c65c54688fbb');
+-- Delete related records
+DELETE FROM public.profiles WHERE id = 'user_uuid_here';
+DELETE FROM public.inventory_bookings WHERE user_id = 'user_uuid_here';
+DELETE FROM public.inventory_logs WHERE user_id = 'user_uuid_here';
+
+-- Delete user from authentication
+DELETE FROM auth.users WHERE id = 'user_uuid_here';
+
+COMMIT;
 
 
 
-## DELETING admin (will all be in 'deleted user' category)
 
--- Function to completely remove a user
-CREATE OR REPLACE FUNCTION delete_user_and_profile(user_uuid UUID)
-RETURNS VOID AS $$
-DECLARE 
-  system_user_id UUID;
-BEGIN
-  -- First, ensure a system user exists
-  INSERT INTO auth.users (id, email)
-  VALUES ('00000000-0000-0000-0000-000000000000', 'system@deleted.user')
-  ON CONFLICT (id) DO NOTHING;
+## MAKE FIRST ADMIN
 
-  INSERT INTO profiles (id, email, role)
-  VALUES ('00000000-0000-0000-0000-000000000000', 'system@deleted.user', 'admin')
-  ON CONFLICT (id) DO NOTHING;
+-- Update the user's role in the profiles table
+UPDATE profiles
+SET role = 'admin'
+WHERE email = 'your-email@example.com';
 
-  -- Delete user's bookings
-  DELETE FROM inventory_bookings WHERE user_id = user_uuid;
-  
-  -- Delete user's inventory logs
-  DELETE FROM inventory_logs WHERE user_id = user_uuid;
-  
-  -- Replace user references in inventory with system user
-  UPDATE inventory 
-  SET 
-    created_by = '00000000-0000-0000-0000-000000000000',
-    updated_by = '00000000-0000-0000-0000-000000000000'
-  WHERE created_by = user_uuid OR updated_by = user_uuid;
-  
-  -- Delete user's profile
-  DELETE FROM profiles WHERE id = user_uuid;
-  
-  -- Delete the user from auth.users
-  DELETE FROM auth.users WHERE id = user_uuid;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Usage (replace with actual UUID)
-SELECT delete_user_and_profile('d9318603-aa1d-4e2d-bc9f-5a6fd27164fb');
+
+

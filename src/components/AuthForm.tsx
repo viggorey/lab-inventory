@@ -22,53 +22,37 @@ const AuthForm = () => {
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (error) {
+          setMessage(error.message === 'Invalid login credentials' 
+            ? 'Invalid email or password'
+            : error.message
+          );
+          return;
+        }
       } else {
+        // Just handle signup - don't create profile yet
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
-          password,
-          options: {
-            emailRedirectTo: undefined,
-            data: {
-              role: 'pending'
-            }
-          }
+          password
         });
   
-        console.log('Signup response:', JSON.stringify(data, null, 2));
-  
         if (signUpError) {
-          console.error('Signup error:', JSON.stringify(signUpError, null, 2));
-          throw signUpError;
+          setMessage(signUpError.message);
+          return;
         }
   
         if (data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: data.user.id,
-                email: email,
-                role: 'pending'
-              }
-            ])
-            .single();
-  
-          if (profileError) {
-            console.error('Profile error:', JSON.stringify(profileError, null, 2));
-            throw profileError;
-          }
-  
-          setMessage('Account created! Please wait for admin approval.');
+          setMessage(
+            'Account created successfully! Please check your email to verify your account. ' +
+            'After verification, an administrator will need to approve your account.'
+          );
+          return;
         }
       }
-    } catch (error: unknown) {
-      console.error('Complete error object:', error);
-      if (error instanceof Error) {
-        setMessage(error.message);
-      } else {
-        setMessage('Failed to create account. Please try again.');
-      }
+    } catch (error) {
+      console.error('Auth Error:', error);
+      setMessage('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -131,8 +115,10 @@ const AuthForm = () => {
 
             {message && (
               <div className={`p-4 rounded-lg ${
-                message.includes('created') 
+                message.includes('successfully') || message.includes('verify')
                   ? 'bg-green-50 text-green-700 border border-green-200'
+                  : message.includes('Invalid') 
+                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                   : 'bg-red-50 text-red-700 border border-red-200'
               }`}>
                 {message}
