@@ -320,7 +320,7 @@ const InventorySystem = () => {
         return;
       }
   
-      await addItem(); // We'll move the item addition logic to a separate function
+      await addItem();
     } catch (error) {
       console.error('Error details:', error);
       alert('Failed to add item. Please try again.');
@@ -840,7 +840,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                           placeholder="Unit"
                           items={items}
                           field="unit"
-                          required={false}
+                          _required={false}  // Explicitly set as optional
                         />
                       </div>
                     </div>
@@ -852,7 +852,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         placeholder="Category *"
                         items={items}
                         field="category"
-                        required
+                        _required
                       />
                     </div>
 
@@ -863,7 +863,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         placeholder="Location *"
                         items={items}
                         field="location"
-                        required
+                        _required
                       />
                     </div>
 
@@ -1095,7 +1095,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       placeholder="Category"
                       items={items}
                       field="category"
-                      required
+                      _required
                     />
                   </div>
 
@@ -1109,7 +1109,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       placeholder="Location"
                       items={items}
                       field="location"
-                      required
+                      _required
                     />
                   </div>
                 </div>
