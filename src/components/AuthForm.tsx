@@ -15,48 +15,69 @@ const AuthForm = () => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-  
+    
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        
+  
         if (error) {
-          setMessage(error.message === 'Invalid login credentials' 
-            ? 'Invalid email or password'
-            : error.message
-          );
+          setMessage(error.message);
           return;
         }
       } else {
-        // Just handle signup - don't create profile yet
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        console.log('Starting signup process...');
+        
+        // Sign up without email verification
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password
         });
   
+        console.log('Signup result:', { signUpData, signUpError });
+    
         if (signUpError) {
+          console.error('Signup error:', signUpError);
           setMessage(signUpError.message);
           return;
         }
+    
+        if (signUpData?.user) {
+          try {
+            // Create profile immediately
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: signUpData.user.id,
+                email: signUpData.user.email,
+                role: 'pending',
+                created_at: new Date().toISOString()
+              });
   
-        if (data.user) {
-          setMessage(
-            'Account created successfully! Please check your email to verify your account. ' +
-            'After verification, an administrator will need to approve your account.'
-          );
-          return;
+            if (profileError) {
+              console.error('Profile creation error:', profileError);
+              throw profileError;
+            }
+            
+            setMessage(
+              'Account created successfully! Please wait for administrator approval.'
+            );
+          } catch (error) {
+            console.error('Profile creation error:', error);
+            setMessage('Account created but profile setup failed. Please contact support.');
+          }
         }
       }
     } catch (error) {
-      console.error('Auth Error:', error);
+      console.error('Auth error:', error);
       setMessage('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-6">

@@ -37,7 +37,7 @@ export default function PendingApprovalPage() {
                 Awaiting Administrator Approval
               </h2>
               <p className="text-gray-600">
-                Your account has been created and email verified. Please wait while an administrator reviews your account.
+                Your account has been created. Please wait while an administrator reviews your account.
               </p>
             </div>
 

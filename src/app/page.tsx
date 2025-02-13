@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';  
 import type { User } from '@supabase/supabase-js';
 
@@ -24,6 +24,69 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const checkSession = useCallback(async () => {
+    try {
+      console.log('Starting check session...');
+      setLoading(true);
+  
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session check:', { sessionData, sessionError });
+      
+      if (sessionError) throw sessionError;
+  
+      if (!sessionData.session) {
+        console.log('No active session');
+        setUser(null);
+        setUserRole(null);
+        return;
+      }
+  
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      console.log('User data:', userData);
+      
+      if (userError) throw userError;
+  
+      if (userData.user) {
+        setUser(userData.user);
+        
+        // Check for existing profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userData.user.id)
+          .single();
+  
+        // If no profile exists and no error (meaning profile just doesn't exist yet)
+        if (!profile && !profileError) {
+          // Create profile
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert([{
+              id: userData.user.id,
+              email: userData.user.email,
+              role: 'pending',
+              created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+  
+          if (createError) throw createError;
+          
+          if (newProfile) {
+            setUserRole(newProfile.role);
+          }
+        } else if (profile) {
+          setUserRole(profile.role);
+        }
+      }
+    } catch (error) {
+      console.error('Session check error:', error);
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -32,78 +95,6 @@ export default function Home() {
     if (!isClient) return;
 
     let mounted = true;
-
-    const checkSession = async () => {
-      try {
-        // First check the session
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setError("Session error: " + sessionError.message);
-          return;
-        }
-
-        if (!sessionData.session) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error("User error:", userError);
-          setError("User error: " + userError.message);
-          return;
-        }
-
-        if (!mounted) return;
-
-        // In checkSession function
-        if (userData.user) {
-          setUser(userData.user);
-          try {
-            // Check if profile exists
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', userData.user.id)
-              .single();
-
-            if (!profile && !profileError) {
-              // Create profile if it doesn't exist
-              const { data: newProfile, error: createError } = await supabase
-                .from('profiles')
-                .insert([
-                  {
-                    id: userData.user.id,
-                    email: userData.user.email,
-                    role: 'pending'
-                  }
-                ])
-                .select()
-                .single();
-
-              if (createError) throw createError;
-              if (newProfile) setUserRole(newProfile.role);
-            } else if (profile) {
-              setUserRole(profile.role);
-            }
-          } catch (error) {
-            console.error("Profile error:", error);
-            setError("Profile error: " + (error as Error).message);
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-        setError("Unexpected error: " + (error as Error).message);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
 
     checkSession();
 
@@ -117,7 +108,11 @@ export default function Home() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [isClient]);
+  }, [isClient, checkSession]);
+
+  useEffect(() => {
+    console.log('User role changed:', userRole);
+  }, [userRole]);
 
   if (!isClient || loading) {
     return <LoadingState />;

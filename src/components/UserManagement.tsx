@@ -24,21 +24,39 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching all profiles...');
+      
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
   
+      console.log('Raw fetch results:', {
+        profiles, 
+        error,
+        profileCount: profiles?.length
+      });
+    
       if (error) {
         console.error('Error fetching profiles:', error);
         setError('Failed to load users. Please try refreshing the page.');
         return;
       }
+    
+      // Log each profile details
+      profiles?.forEach(profile => {
+        console.log('Profile details:', {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+          createdAt: profile.created_at
+        });
+      });
   
       setUsers(profiles || []);
-      setError(null); // Clear any existing errors
+      setError(null);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Unexpected error in fetchUsers:', error);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

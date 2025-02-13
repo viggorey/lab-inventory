@@ -118,6 +118,7 @@ const InventorySystem = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [searchTerms, setSearchTerms] = useState({
@@ -367,26 +368,33 @@ const InventorySystem = () => {
   
       await Promise.all([fetchItems(), fetchItems(true)]);
   
-      // Reset form with all fields including unit and comment
-      setNewItem({
-        name: '',
-        quantity: '',
-        unit: '',
-        category: '',
-        location: '',
-        source: '',
-        comment: ''
-      });
-  
-      setSimilarityWarning({ similarItems: [], similarCategories: [], show: false });
-      
-      // Close comment modal if it's open
-      setShowCommentModal(false);
-    } catch (error) {
-      console.error('Error details:', error);
-      alert('Failed to add item. Please try again.');
-    }
-  };
+    // Add success message and clear it after 3 seconds
+    setSuccessMessage('Item added successfully!');
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+
+    // Reset form with all fields
+    setNewItem({
+      name: '',
+      quantity: '',
+      unit: '',
+      category: '',
+      location: '',
+      source: '',
+      comment: ''
+    });
+
+    setSimilarityWarning({ similarItems: [], similarCategories: [], show: false });
+    
+    // Close comment modal if it's open
+    setShowCommentModal(false);
+  } catch (error) {
+    console.error('Error details:', error);
+    alert('Failed to add item. Please try again.');
+  }
+};
+
 
   const handleDelete = async (itemId: string) => {
     if (!isAdmin) return;
@@ -764,6 +772,13 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+      {/* Success Message - Place this at the top level */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-bounce">
+          {successMessage}
+        </div>
+      )}
+  
       {loading ? (
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-lg text-gray-600">Loading...</div>
@@ -883,9 +898,11 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
                     <button 
                       type="submit" 
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"
+                      className={`bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0 ${
+                        successMessage ? 'bg-green-500 hover:bg-green-600' : ''
+                      }`}
                     >
-                      Add Item
+                      {successMessage ? 'Added ✓' : 'Add Item'}
                     </button>
                   </div>
                 </form>
