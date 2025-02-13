@@ -18,7 +18,7 @@ const AuthForm = () => {
     
     try {
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data: _, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
