@@ -13,7 +13,6 @@ interface AutocompleteInputProps {
   items: Item[];
   field: 'category' | 'location' | 'unit';
   className?: string;
-  _required?: boolean;  // Keep this
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({ 
@@ -21,8 +20,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   onChange, 
   placeholder, 
   items, 
-  field,
-  _required = false  // Add a default value of false
+  field
 }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);

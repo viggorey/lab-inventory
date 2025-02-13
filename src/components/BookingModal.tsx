@@ -111,6 +111,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
       maxBookedQuantity = Math.max(maxBookedQuantity, booking.quantity);
     });
   
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const availableQuantity = parseInt(item.quantity);
     const remainingQuantity = availableInitialQuantity - maxBookedQuantity;
 

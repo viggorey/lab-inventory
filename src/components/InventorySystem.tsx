@@ -143,6 +143,7 @@ const InventorySystem = () => {
   });
 
   const [showCommentModal, setShowCommentModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
   
   const ITEMS_PER_PAGE = 20;
@@ -840,7 +841,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                           placeholder="Unit"
                           items={items}
                           field="unit"
-                          _required={false}  // Explicitly set as optional
                         />
                       </div>
                     </div>
@@ -852,7 +852,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         placeholder="Category *"
                         items={items}
                         field="category"
-                        _required
                       />
                     </div>
 
@@ -863,7 +862,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         placeholder="Location *"
                         items={items}
                         field="location"
-                        _required
                       />
                     </div>
 
@@ -1095,7 +1093,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       placeholder="Category"
                       items={items}
                       field="category"
-                      _required
                     />
                   </div>
 
@@ -1109,7 +1106,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       placeholder="Location"
                       items={items}
                       field="location"
-                      _required
                     />
                   </div>
                 </div>
