@@ -92,6 +92,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
       return { valid: false, message: "Please select a valid quantity" };
     }
   
+    // Add check for item quantity being 0
+    const availableInitialQuantity = parseInt(item.quantity);
+    if (availableInitialQuantity === 0) {
+      return { valid: false, message: "This item is currently out of stock" };
+    }
+  
     // Check overlapping bookings and available quantity
     const overlappingBookings = existingBookings.filter(booking => {
       const bookingStart = new Date(booking.start_datetime);
@@ -106,8 +112,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
     });
   
     const availableQuantity = parseInt(item.quantity);
-    const remainingQuantity = availableQuantity - maxBookedQuantity;
-  
+    const remainingQuantity = availableInitialQuantity - maxBookedQuantity;
+
     if (requestedQuantity > remainingQuantity) {
       return {
         valid: false,

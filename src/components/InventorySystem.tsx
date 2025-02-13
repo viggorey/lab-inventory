@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, memo} from 'react';
-import { Download, Upload, LogOut, Box, Search } from 'lucide-react';
-import { uniq } from 'lodash';
+import { Download, Upload, LogOut, Box, Search, MessageSquare } from 'lucide-react';import { uniq } from 'lodash';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
@@ -11,6 +10,7 @@ import Pagination from '@/components/Pagination';
 import { Calendar, Edit, X, ClipboardList, Trash2 } from 'lucide-react';
 import BookingModal from '@/components/BookingModal';
 import BookingsList from '@/components/BookingsList';
+import CommentModal from '@/components/CommentModal';
 import { Item } from '@/types/inventory';
 
 const DEBUG = process.env.NODE_ENV === 'development';
@@ -51,35 +51,64 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
   isAdmin: boolean;
   onEdit: (item: Item) => void;
   onBook: (item: Item) => void;
-}) => (
-  <tr className="hover:bg-gray-50 transition-colors">
-    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.source}</td>
-    <td className="px-6 py-4 whitespace-nowrap text-sm">
-      <div className="flex gap-2">
-        <button
-          onClick={() => onBook(item)}
-          className="bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
-        >
-          <Calendar className="w-4 h-4" />
-          Book
-        </button>
-        {isAdmin && (
-          <button
-            onClick={() => onEdit(item)}
-            className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
-          >
-            <Edit className="w-4 h-4" />
-            Edit
-          </button>
-        )}
-      </div>
-    </td>
-  </tr>
-));
+}) => {
+  const [showComment, setShowComment] = useState(false);
+
+  return (
+    <>
+      <tr className="hover:bg-gray-50 transition-colors">
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          {item.quantity} {item.unit}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <div className="flex items-center gap-2">
+            {item.source}
+            {item.comment && (
+              <button
+                onClick={() => setShowComment(!showComment)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <MessageSquare className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm bg-gray-50">
+          <div className="flex items-center justify-center gap-1">
+            <button
+              onClick={() => onBook(item)}
+              className="bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
+            >
+              <Calendar className="w-3 h-3" />
+              Book
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => onEdit(item)}
+                className="bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors flex items-center gap-1"
+              >
+                <Edit className="w-3 h-3" />
+                Edit
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+      {showComment && item.comment && (
+        <tr>
+          <td colSpan={6} className="bg-gray-50 px-6 py-4">
+            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+              {item.comment}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+});
 
 InventoryRow.displayName = 'InventoryRow';
 
@@ -93,10 +122,10 @@ const InventorySystem = () => {
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [searchTerms, setSearchTerms] = useState({
     name: '',
-    quantity: '',
+    quantity: '',  // This will include both quantity and unit
     category: '',
     location: '',
-    source: ''
+    source: ''     // This will search both source and comment
   });
   const [similarityWarning, setSimilarityWarning] = useState<SimilarityWarning>({
     similarItems: [],
@@ -106,10 +135,16 @@ const InventorySystem = () => {
   const [newItem, setNewItem] = useState({
     name: '',
     quantity: '',
+    unit: '',
     category: '',
     location: '',
-    source: ''
+    source: '',
+    comment: ''
   });
+
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  
   const ITEMS_PER_PAGE = 20;
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -207,7 +242,7 @@ const InventorySystem = () => {
     checkUserRole();
   }, [fetchItems]); // Add fetchItems as dependency
 
-  // Calculate similarity of item name added (80% warning)
+  // Calculate similarity of item name added (60% warning)
   function levenshteinDistance(str1: string, str2: string): number {
     const m = str1.length;
     const n = str2.length;
@@ -298,9 +333,17 @@ const InventorySystem = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
   
+      // Clean up the item data before insertion
+      const itemToInsert = {
+        ...newItem,
+        unit: newItem.unit || null,      // Make sure unit is null if empty
+        comment: newItem.comment || null, // Make sure comment is null if empty
+        created_by: user.id
+      };
+  
       const { data: newItemData, error: insertError } = await supabase
         .from('inventory')
-        .insert([{ ...newItem, created_by: user.id }])
+        .insert([itemToInsert])
         .select()
         .single();
   
@@ -323,15 +366,21 @@ const InventorySystem = () => {
   
       await Promise.all([fetchItems(), fetchItems(true)]);
   
+      // Reset form with all fields including unit and comment
       setNewItem({
         name: '',
         quantity: '',
+        unit: '',
         category: '',
         location: '',
-        source: ''
+        source: '',
+        comment: ''
       });
   
       setSimilarityWarning({ similarItems: [], similarCategories: [], show: false });
+      
+      // Close comment modal if it's open
+      setShowCommentModal(false);
     } catch (error) {
       console.error('Error details:', error);
       alert('Failed to add item. Please try again.');
@@ -419,8 +468,6 @@ const InventorySystem = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
   
-      console.log('Starting edit for item:', editingItem.id);
-  
       // Get the original item to compare changes
       const { data: originalItem, error: originalError } = await supabase
         .from('inventory')
@@ -428,12 +475,7 @@ const InventorySystem = () => {
         .eq('id', editingItem.id)
         .single();
   
-      if (originalError) {
-        console.error('Error fetching original item:', originalError);
-        throw originalError;
-      }
-  
-      console.log('Original item:', originalItem);
+      if (originalError) throw originalError;
   
       // Update the item
       const { error: updateError } = await supabase
@@ -441,9 +483,11 @@ const InventorySystem = () => {
         .update({
           name: editingItem.name,
           quantity: editingItem.quantity,
+          unit: editingItem.unit || null,
           category: editingItem.category,
           location: editingItem.location,
           source: editingItem.source,
+          comment: editingItem.comment || null,
           updated_at: new Date().toISOString(),
           updated_by: user.id
         })
@@ -454,7 +498,7 @@ const InventorySystem = () => {
       // Log the changes
       if (originalItem) {
         const changes = [];
-        const fields: (keyof Item)[] = ['name', 'quantity', 'category', 'location', 'source'];
+        const fields: (keyof Item)[] = ['name', 'quantity', 'unit', 'category', 'location', 'source', 'comment'];
         
         for (const field of fields) {
           if (originalItem[field]?.toString() !== editingItem[field]?.toString()) {
@@ -469,27 +513,24 @@ const InventorySystem = () => {
               timestamp: new Date().toISOString()
             };
             changes.push(logEntry);
-            console.log('Created log entry:', logEntry);
           }
         }
   
         if (changes.length > 0) {
-          console.log('Inserting log entries:', changes);
-          const { data: logData, error: logError } = await supabase
+          const { error: logError } = await supabase
             .from('inventory_logs')
             .insert(changes)
             .select();
   
           if (logError) {
             console.error('Error creating logs:', logError);
-            throw logError;
           }
-          console.log('Successfully created logs:', logData);
         }
       }
   
       setIsEditing(false);
       setEditingItem(null);
+      setShowCommentModal(false);
       await fetchItems();
     } catch (error) {
       console.error('Error updating item:', error);
@@ -503,81 +544,104 @@ const InventorySystem = () => {
   };
   
 
-  // Handle Excel export
-  const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(allItems);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-    XLSX.writeFile(wb, "lab_inventory.xlsx");
-  };
+// HandleExport function
+const handleExport = () => {
+  const exportData = allItems.map(item => ({
+    name: item.name || '',
+    quantity: item.quantity.toString(),  // Convert to string to ensure Excel handles 0 properly
+    unit: item.unit || '',              // Empty string if null/undefined
+    category: item.category || '',
+    location: item.location || '',
+    source: item.source || '',          // Empty string if null/undefined
+    comment: item.comment || ''         // Empty string if null/undefined
+  }));
 
-  // Handle Excel import
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isAdmin) return;
-      
-    const files = e.target.files;
-    if (files && files[0]) {
-      const file = files[0];
-  
-      // Check file size
-      if (file.size > MAX_FILE_SIZE) {
-        alert('File is too large. Maximum size is 5MB.');
-        // Reset the file input
-        e.target.value = '';
-        return;
-      }
-  
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        if (event.target?.result) {
-          try {
-            const wb = XLSX.read(event.target.result, { type: 'binary' });
-            const wsname = wb.SheetNames[0];
-            const ws = wb.Sheets[wsname];
-            const data = XLSX.utils.sheet_to_json(ws) as Item[];
-  
-            // Validate that data isn't empty
-            if (data.length === 0) {
-              alert('The Excel file appears to be empty.');
-              return;
-            }
-  
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-  
-            // Insert all items into database
-            const { error } = await supabase
-              .from('inventory')
-              .insert(
-                data.map(item => ({
-                  ...item,
-                  created_by: user.id
-                }))
-              );
-  
-            if (error) {
-              console.error('Error importing items:', error);
-              alert('Error importing items. Please check the file format and try again.');
-              return;
-            }
-  
-            await fetchItems(); // Fetch paginated items
-            await fetchItems(true); // Fetch all items
-            alert('Import successful!');
-          } catch (error) {
-            console.error('Error processing file:', error);
-            alert('Error processing file. Please make sure it\'s a valid Excel file.');
-          }
-        }
-      };
-  
-      reader.onerror = () => {
-        alert('Error reading file. Please try again.');
-      };
-  
-      reader.readAsBinaryString(file);
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+  XLSX.writeFile(wb, "lab_inventory.xlsx");
+};
+
+// Update handleImport function
+const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (!isAdmin) return;
+    
+  const files = e.target.files;
+  if (files && files[0]) {
+    const file = files[0];
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert('File is too large. Maximum size is 5MB.');
+      e.target.value = '';
+      return;
     }
-  };
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      if (event.target?.result) {
+        try {
+          const wb = XLSX.read(event.target.result, { type: 'binary' });
+          const wsname = wb.SheetNames[0];
+          const ws = wb.Sheets[wsname];
+          
+          const data = XLSX.utils.sheet_to_json(ws, { 
+            defval: null,  
+            raw: false     
+          }) as Array<{
+            name?: string;
+            quantity?: number | string;
+            unit?: string;
+            category?: string;
+            location?: string;
+            source?: string;
+            comment?: string;
+          }>;
+  
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+  
+          const transformedData = data.filter(row => 
+            row.name && row.name.toString().trim() !== '' &&
+            row.quantity !== undefined && row.quantity !== null &&
+            row.category && row.category.toString().trim() !== '' &&
+            row.location && row.location.toString().trim() !== ''
+          ).map(row => ({
+            name: String(row.name).trim(),
+            quantity: Number(row.quantity),
+            unit: row.unit ? String(row.unit).trim() : null,
+            category: String(row.category).trim(),
+            location: String(row.location).trim(),
+            source: row.source ? String(row.source).trim() : null,
+            comment: row.comment ? String(row.comment).trim() : null,
+            created_by: user.id,
+            created_at: new Date().toISOString()
+          }));
+  
+          if (transformedData.length === 0) {
+            throw new Error('No valid rows found for import');
+          }
+  
+          const { error } = await supabase
+            .from('inventory')
+            .insert(transformedData);
+  
+          if (error) throw error;
+  
+          await Promise.all([fetchItems(), fetchItems(true)]);
+          alert(`Import successful! ${transformedData.length} items imported.`);
+        } catch (error) {
+          const errorMessage = error instanceof Error 
+            ? error.message 
+            : 'An unknown error occurred during file import';
+          
+          alert(errorMessage);
+        }
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  }
+};
 
   // Handle logout
   const handleLogout = async () => {
@@ -644,10 +708,21 @@ const InventorySystem = () => {
   const filteredItems = allItems.filter(item => {
     return Object.keys(searchTerms).every(key => {
       const searchTerm = searchTerms[key as keyof typeof searchTerms];
+      if (!searchTerm) return true;
+  
+      if (key === 'quantity') {
+        const fullQuantity = `${item.quantity} ${item.unit || ''}`.toLowerCase();
+        return fullQuantity.includes(searchTerm.toLowerCase());
+      }
+  
+      if (key === 'source') {
+        const sourceAndComment = `${item.source} ${item.comment || ''}`.toLowerCase();
+        return sourceAndComment.includes(searchTerm.toLowerCase());
+      }
+  
       const itemValue = item[key as keyof Item];
-      return !searchTerm || (itemValue?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+      return itemValue?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
     });
-
   });
 
   const handleShowLogs = async (itemId: string) => {
@@ -737,47 +812,80 @@ const InventorySystem = () => {
               {isAdmin && isClient && (
                 <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Item</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <input
-                      className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                      placeholder="Name"
-                      value={newItem.name}
-                      onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                      required
-                    />
-                    <input
-                      className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                      placeholder="Quantity"
-                      type="number"
-                      min="1"
-                      value={newItem.quantity}
-                      onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
-                      required
-                    />
-                    <AutocompleteInput
-                      value={newItem.category}
-                      onChange={(value) => setNewItem({...newItem, category: value})}
-                      placeholder="Category"
-                      items={items}
-                      field="category"
-                    />
-                    <AutocompleteInput
-                      value={newItem.location}
-                      onChange={(value) => setNewItem({...newItem, location: value})}
-                      placeholder="Location"
-                      items={items}
-                      field="location"
-                    />
-                    <input
-                      className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                      placeholder="Source"
-                      value={newItem.source}
-                      onChange={(e) => setNewItem({...newItem, source: e.target.value})}
-                      required
-                    />
+                  <div className="flex items-center gap-4">
+                    <div className="w-1/4">
+                      <input
+                        className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                        placeholder="Name *"
+                        value={newItem.name}
+                        onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="flex gap-2 w-1/6">
+                      <input
+                        className="px-4 py-2 border rounded-lg w-20 text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                        placeholder="Qty *"
+                        type="number"
+                        min="0"
+                        value={newItem.quantity}
+                        onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                        required
+                      />
+                      <div className="w-24">
+                        <AutocompleteInput
+                          value={newItem.unit}
+                          onChange={(value) => setNewItem({...newItem, unit: value})}
+                          placeholder="Unit"
+                          items={items}
+                          field="unit"
+                          required={false}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="w-1/6">
+                      <AutocompleteInput
+                        value={newItem.category}
+                        onChange={(value) => setNewItem({...newItem, category: value})}
+                        placeholder="Category *"
+                        items={items}
+                        field="category"
+                        required
+                      />
+                    </div>
+
+                    <div className="w-1/6">
+                      <AutocompleteInput
+                        value={newItem.location}
+                        onChange={(value) => setNewItem({...newItem, location: value})}
+                        placeholder="Location *"
+                        items={items}
+                        field="location"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 w-1/6">
+                      <input
+                        className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                        placeholder="Source"
+                        value={newItem.source}
+                        onChange={(e) => setNewItem({...newItem, source: e.target.value})}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCommentModal(true)}
+                        className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 flex-shrink-0"
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                      </button>
+                    </div>
+
                     <button 
                       type="submit" 
-                      className="md:col-span-5 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"
                     >
                       Add Item
                     </button>
@@ -850,12 +958,22 @@ const InventorySystem = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      {Object.keys(searchTerms).map(key => (
-                        <th key={key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          {key}
-                        </th>
-                      ))}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                        Quantity
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                        Location
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                        Source/Comment
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100 w-[120px]">
                         Actions
                       </th>
                     </tr>
@@ -873,6 +991,7 @@ const InventorySystem = () => {
                   </tbody>
                 </table>
               </div>
+
 
               {/* Pagination */}
               <div className="mt-6">
@@ -921,43 +1040,119 @@ const InventorySystem = () => {
               </div>
 
               <form onSubmit={handleSaveEdit} className="space-y-4">
-                <input
-                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                  placeholder="Name"
-                  value={editingItem.name}
-                  onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
-                  required
-                />
-                <input
-                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                  placeholder="Quantity"
-                  type="number"
-                  value={editingItem.quantity}
-                  onChange={(e) => setEditingItem({...editingItem, quantity: e.target.value})}
-                  required
-                />
-                <AutocompleteInput
-                  value={editingItem.category}
-                  onChange={(value) => setEditingItem({...editingItem, category: value})}
-                  placeholder="Category"
-                  items={items}
-                  field="category"
-                />
-                <AutocompleteInput
-                  value={editingItem.location}
-                  onChange={(value) => setEditingItem({...editingItem, location: value})}
-                  placeholder="Location"
-                  items={items}
-                  field="location"
-                />
-                <input
-                  className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                  placeholder="Source"
-                  value={editingItem.source}
-                  onChange={(e) => setEditingItem({...editingItem, source: e.target.value})}
-                  required
-                />
-                
+                {/* Required Fields Section */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 required-field">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                      placeholder="Name"
+                      value={editingItem.name}
+                      onChange={(e) => setEditingItem(prev => prev ? {...prev, name: e.target.value} : null)}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="w-1/3">
+                      <label className="block text-sm font-medium text-gray-700 required-field">
+                        Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                        placeholder="Quantity"
+                        type="number"
+                        min="0"
+                        value={editingItem.quantity}
+                        onChange={(e) => setEditingItem(prev => prev ? {...prev, quantity: e.target.value} : null)}
+                        required
+                      />
+                    </div>
+
+                    <div className="w-2/3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Unit <span className="text-gray-400">(optional)</span>
+                      </label>
+                      <AutocompleteInput
+                        value={editingItem.unit || ''}
+                        onChange={(value) => setEditingItem(prev => prev ? {...prev, unit: value || null} : null)}
+                        placeholder="Unit (optional)"
+                        items={items}
+                        field="unit"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 required-field">
+                      Category <span className="text-red-500">*</span>
+                    </label>
+                    <AutocompleteInput
+                      value={editingItem.category}
+                      onChange={(value) => setEditingItem(prev => prev ? {...prev, category: value} : null)}
+                      placeholder="Category"
+                      items={items}
+                      field="category"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 required-field">
+                      Location <span className="text-red-500">*</span>
+                    </label>
+                    <AutocompleteInput
+                      value={editingItem.location}
+                      onChange={(value) => setEditingItem(prev => prev ? {...prev, location: value} : null)}
+                      placeholder="Location"
+                      items={items}
+                      field="location"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Optional Fields Section */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Source <span className="text-gray-400">(optional)</span>
+                    </label>
+                    <input
+                      className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                      placeholder="Source (optional)"
+                      value={editingItem.source || ''}
+                      onChange={(e) => setEditingItem(prev => prev ? {...prev, source: e.target.value || null} : null)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Comment <span className="text-gray-400">(optional)</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                        placeholder="Comment (optional)"
+                        value={editingItem.comment || ''}
+                        onChange={(e) => setEditingItem(prev => prev ? {...prev, comment: e.target.value || null} : null)}
+                        readOnly
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCommentModal(true)}
+                        className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+                        title={editingItem.comment ? "Edit Comment" : "Add Comment"}
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
                 <div className="flex justify-between pt-4">
                   <div className="flex gap-2">
                     <button
@@ -997,6 +1192,23 @@ const InventorySystem = () => {
             </div>
           </div>
         </div>
+      )}
+
+
+      {/* Comment Modal */}
+      {showCommentModal && (
+        <CommentModal
+          comment={editingItem ? editingItem.comment || '' : newItem.comment}
+          onChange={(comment) => {
+            if (editingItem) {
+              setEditingItem({...editingItem, comment});
+            } else {
+              setNewItem({...newItem, comment});
+            }
+          }}
+          onClose={() => setShowCommentModal(false)}
+          title={editingItem ? "Edit Comment" : "Add Comment"}
+        />
       )}
 
       {/* Similarity Warning Modal */}

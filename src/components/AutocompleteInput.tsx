@@ -11,7 +11,9 @@ interface AutocompleteInputProps {
   onChange: (value: string) => void;
   placeholder: string;
   items: Item[];
-  field: 'category' | 'location';
+  field: 'category' | 'location' | 'unit';
+  className?: string;
+  required?: boolean;  // Add this
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({ 
@@ -77,7 +79,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   const renderInput = () => (
     <input
-      className="px-3 py-2 border rounded w-full text-gray-700 placeholder-gray-500 font-normal"
+      className="px-3 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 font-normal focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
       type="text"
       value={value}
       onChange={handleInputChange}
