@@ -18,7 +18,7 @@ const AuthForm = () => {
     
     try {
       if (isLogin) {
-        const { data: _, error } = await supabase.auth.signInWithPassword({
+        const { data: loginData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -27,26 +27,25 @@ const AuthForm = () => {
           setMessage(error.message);
           return;
         }
+  
+        // Optionally use loginData if needed
+        if (loginData.user) {
+          // Do something with the user data if required
+        }
       } else {
-        console.log('Starting signup process...');
-        
-        // Sign up without email verification
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password
         });
   
-        console.log('Signup result:', { signUpData, signUpError });
-    
         if (signUpError) {
           console.error('Signup error:', signUpError);
           setMessage(signUpError.message);
           return;
         }
-    
-        if (signUpData?.user) {
+  
+        if (signUpData.user) {
           try {
-            // Create profile immediately
             const { error: profileError } = await supabase
               .from('profiles')
               .insert({
