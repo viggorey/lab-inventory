@@ -177,21 +177,29 @@ const InventorySystem = () => {
       let query = supabase
         .from('inventory')
         .select('*')
-        .order('created_at', { ascending: false });
-
+        .order('category', { ascending: true }) // First, sort by category
+        .order('name', { ascending: true });    // Then, sort by name within categories
+  
       if (!fetchAll) {
         query = query.range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
       }
-
+  
       const { data, error } = await query;
-
+  
       if (error) throw error;
-
+  
       if (fetchAll) {
-        setAllItems(data || []);
+        // Sort for all items view
+        const sortedData = data
+          .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+        setAllItems(sortedData || []);
       } else {
-        setItems(data || []);
+        // Sort for paginated view
+        const sortedData = data
+          .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+        setItems(sortedData || []);
       }
+      
       setTotalItems(countResponse.count || 0);
     } catch (error) {
       console.error('Error in fetchItems:', error);
