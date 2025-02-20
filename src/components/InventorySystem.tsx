@@ -69,7 +69,7 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
             {item.comment && (
               <button
                 onClick={() => setShowComment(!showComment)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-blue-500 hover:text-blue-700"
               >
                 <MessageSquare className="w-4 h-4" />
               </button>
@@ -896,7 +896,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       <button
                         type="button"
                         onClick={() => setShowCommentModal(true)}
-                        className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 flex-shrink-0"
+                        className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                          newItem.comment ? 'text-blue-500' : 'text-gray-500'
+                        }`}
                       >
                         <MessageSquare className="w-5 h-5" />
                       </button>
@@ -1147,27 +1149,19 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     />
                   </div>
 
-                  <div>
+                  <div className="flex items-center gap-2 mb-4">
                     <label className="block text-sm font-medium text-gray-700">
-                      Comment <span className="text-gray-400">(optional)</span>
+                      Add/Edit Comment
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
-                        placeholder="Comment (optional)"
-                        value={editingItem.comment || ''}
-                        onChange={(e) => setEditingItem(prev => prev ? {...prev, comment: e.target.value || null} : null)}
-                        readOnly
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCommentModal(true)}
-                        className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-                        title={editingItem.comment ? "Edit Comment" : "Add Comment"}
-                      >
-                        <MessageSquare className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCommentModal(true)}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editingItem?.comment ? 'text-blue-500' : 'text-gray-500'
+                      }`}
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
 
@@ -1408,6 +1402,17 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Comment Modal for editing */}
+      {showCommentModal && editingItem && (
+        <CommentModal
+          comment={editingItem.comment || ''}
+          onChange={(value) => setEditingItem(prev => prev ? {...prev, comment: value} : null)}
+          onClose={() => setShowCommentModal(false)}
+          onSubmit={() => setShowCommentModal(false)}
+          title="Edit Comment"
+        />
       )}
     </div>
   );

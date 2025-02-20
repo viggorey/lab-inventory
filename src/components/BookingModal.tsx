@@ -35,6 +35,31 @@ interface CalendarEvent {
   };
 }
 
+// Add this CSS at the top of the component, after the imports
+const calendarStyles = `
+  .fc {
+    --fc-border-color: #CBD5E1;
+    --fc-neutral-text-color: #1F2937;
+    --fc-neutral-bg-color: #F8FAFC;
+    --fc-today-bg-color: #EFF6FF;
+    --fc-event-bg-color: #3B82F6;
+    --fc-event-border-color: #2563EB;
+  }
+
+  .fc-daygrid-day-number,
+  .fc-col-header-cell-cushion,
+  .fc-timegrid-axis-cushion,
+  .fc-timegrid-slot-label-cushion,
+  .fc-toolbar-title {
+    color: #1F2937;
+    font-weight: 500;
+  }
+
+  .fc td, .fc th {
+    border-color: #CBD5E1;
+  }
+`;
+
 const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingComplete }) => {
   const [quantity, setQuantity] = useState(1);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -176,6 +201,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <style>{calendarStyles}</style>
       <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl m-4">
         <div className="p-6">
           {/* Header */}
