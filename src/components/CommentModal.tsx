@@ -6,6 +6,7 @@ interface CommentModalProps {
   comment: string;
   onChange: (comment: string) => void;
   onClose: () => void;
+  onSubmit: () => void;
   title?: string;
 }
 
@@ -13,6 +14,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
   comment, 
   onChange, 
   onClose,
+  onSubmit,
   title = "Add Comment" 
 }) => {
   return (
@@ -39,7 +41,13 @@ const CommentModal: React.FC<CommentModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
             >
-              Close
+              Cancel
+            </button>
+            <button
+              onClick={onSubmit}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Submit
             </button>
           </div>
         </div>

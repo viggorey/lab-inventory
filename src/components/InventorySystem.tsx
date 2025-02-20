@@ -1217,16 +1217,11 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       {/* Comment Modal */}
       {showCommentModal && (
         <CommentModal
-          comment={editingItem ? editingItem.comment || '' : newItem.comment}
-          onChange={(comment) => {
-            if (editingItem) {
-              setEditingItem({...editingItem, comment});
-            } else {
-              setNewItem({...newItem, comment});
-            }
-          }}
+          comment={newItem.comment || ''}
+          onChange={(value) => setNewItem({ ...newItem, comment: value })}
           onClose={() => setShowCommentModal(false)}
-          title={editingItem ? "Edit Comment" : "Add Comment"}
+          onSubmit={() => setShowCommentModal(false)}
+          title="Add Comment"
         />
       )}
 
