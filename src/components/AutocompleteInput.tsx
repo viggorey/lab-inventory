@@ -31,8 +31,10 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     setMounted(true);
   }, []);
 
-  // Get unique values for the specified field
-  const uniqueValues = _.uniq(items.map(item => item[field])).filter((value): value is string => Boolean(value));
+  // Get unique values and sort them alphabetically
+  const uniqueValues = _.uniq(items.map(item => item[field]))
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => a.localeCompare(b));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,7 +52,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       const inputValue = e.target.value;
       onChange(inputValue);
       
-      // Safely handle null or undefined values
+      // Filter suggestions based on input and sort alphabetically
       const filtered = uniqueValues.filter((item: string) => {
         if (!item) return false;
         return item.toLowerCase().includes(inputValue.toLowerCase());
@@ -62,13 +64,13 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       console.error('Error in autocomplete:', error);
       setSuggestions([]);
       setShowSuggestions(false);
-      // Add more specific error handling
-      if (error instanceof TypeError) {
-        console.error('Type error in autocomplete:', error.message);
-      } else {
-        console.error('Unexpected error in autocomplete:', error);
-      }
     }
+  };
+
+  const handleInputFocus = () => {
+    // Show all unique values when input is focused
+    setSuggestions(uniqueValues);
+    setShowSuggestions(true);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -82,6 +84,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       type="text"
       value={value}
       onChange={handleInputChange}
+      onFocus={handleInputFocus}
       placeholder={placeholder}
       required={field !== 'unit'}  // Only require for category and location
     />
@@ -99,7 +102,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     <div ref={wrapperRef} className="relative">
       {renderInput()}
       {mounted && showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute z-10 w-full bg-white border rounded-b mt-1 max-h-48 overflow-y-auto shadow-lg">
+        <ul className="absolute z-10 w-full bg-white border rounded-b mt-1 shadow-lg max-h-48 overflow-y-scroll">
           {suggestions.map((suggestion, index) => (
             <li
               key={index}

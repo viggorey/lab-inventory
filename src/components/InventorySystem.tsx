@@ -114,7 +114,6 @@ InventoryRow.displayName = 'InventoryRow';
 
 const InventorySystem = () => {
   const [items, setItems] = useState<Item[]>([]);
-  const [isClient, setIsClient] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -248,9 +247,8 @@ const InventorySystem = () => {
       }
     };
 
-    setIsClient(true);
     checkUserRole();
-  }, [fetchItems]); // Add fetchItems as dependency
+  }, [fetchItems]);
 
   // Calculate similarity of item name added (60% warning)
   function levenshteinDistance(str1: string, str2: string): number {
@@ -833,7 +831,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
           <div className="bg-white rounded-xl shadow-lg">
             <div className="p-6">
               {/* Add New Item Form (Admin Only) */}
-              {isAdmin && isClient && (
+              {isAdmin && (
                 <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Item</h3>
                   <div className="flex items-center gap-4">
@@ -873,7 +871,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         value={newItem.category}
                         onChange={(value) => setNewItem({...newItem, category: value})}
                         placeholder="Category *"
-                        items={items}
+                        items={allItems}
                         field="category"
                       />
                     </div>
@@ -883,7 +881,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         value={newItem.location}
                         onChange={(value) => setNewItem({...newItem, location: value})}
                         placeholder="Location *"
-                        items={items}
+                        items={allItems}
                         field="location"
                       />
                     </div>
@@ -957,7 +955,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                           value={searchTerms[key]}
                           onChange={(value) => setSearchTerms({...searchTerms, [key]: value})}
                           placeholder={`Search ${key}...`}
-                          items={items}
+                          items={allItems}
                           field={key as 'category' | 'location'}
                         />
                       ) : (
@@ -1116,7 +1114,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       value={editingItem.category}
                       onChange={(value) => setEditingItem(prev => prev ? {...prev, category: value} : null)}
                       placeholder="Category"
-                      items={items}
+                      items={allItems}
                       field="category"
                     />
                   </div>
@@ -1129,7 +1127,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       value={editingItem.location}
                       onChange={(value) => setEditingItem(prev => prev ? {...prev, location: value} : null)}
                       placeholder="Location"
-                      items={items}
+                      items={allItems}
                       field="location"
                     />
                   </div>

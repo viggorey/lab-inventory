@@ -18,7 +18,6 @@ function LoadingState() {
 }
 
 export default function Home() {
-  const [isClient, setIsClient] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,19 +29,16 @@ export default function Home() {
       setLoading(true);
   
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session check:', { sessionData, sessionError });
       
       if (sessionError) throw sessionError;
   
       if (!sessionData.session) {
-        console.log('No active session');
         setUser(null);
         setUserRole(null);
         return;
       }
   
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      console.log('User data:', userData);
       
       if (userError) throw userError;
   
@@ -88,33 +84,22 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isClient) return;
-
-    let mounted = true;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkSession();
+    });
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      if (mounted) {
-        checkSession();
-      }
-    });
-
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
-  }, [isClient, checkSession]);
+  }, [checkSession]);
 
   useEffect(() => {
     console.log('User role changed:', userRole);
   }, [userRole]);
 
-  if (!isClient || loading) {
+  if (loading) {
     return <LoadingState />;
   }
 
