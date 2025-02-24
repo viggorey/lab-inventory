@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, memo} from 'react';
-import { Download, Upload, LogOut, Box, Search, MessageSquare } from 'lucide-react';import { uniq } from 'lodash';
+import { Download, Upload, LogOut, Box, Search, MessageSquare, ClipboardList, Trash2 } from 'lucide-react';import { uniq } from 'lodash';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
 import AutocompleteInput from '@/components/AutocompleteInput';
 import Pagination from '@/components/Pagination';
-import { Calendar, Edit, X, ClipboardList, Trash2 } from 'lucide-react';
+import { Calendar, Edit, X } from 'lucide-react';
 import BookingModal from '@/components/BookingModal';
 import BookingsList from '@/components/BookingsList';
 import CommentModal from '@/components/CommentModal';
@@ -162,7 +162,8 @@ const InventorySystem = () => {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const DELETION_PHRASE = "I will delete all of Walter's inventory";
 
-
+  // Add new state for logs modal
+  const [showLogsModal, setShowLogsModal] = useState(false);
 
   // Keep fetchItems outside useEffect but wrap it in useCallback
   const fetchItems = useCallback(async (fetchAll: boolean = false) => {
@@ -1056,17 +1057,16 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl m-4">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Edit Item</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Edit Item</h3>
                 <button
                   onClick={handleCancelEdit}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
-              <form onSubmit={handleSaveEdit} className="space-y-4">
+              <form onSubmit={handleSaveEdit}>
                 {/* Required Fields Section */}
                 <div className="space-y-4">
                   <div>
@@ -1169,37 +1169,38 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex justify-between pt-4">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleShowLogs(editingItem.id)}
-                      className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2"
-                    >
-                      <ClipboardList className="w-4 h-4" />
-                      Logs
-                    </button>
+                {/* Bottom buttons container */}
+                <div className="flex justify-between items-center mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleShowLogs(editingItem.id);
+                      setShowLogsModal(true);
+                    }}
+                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors flex items-center gap-2"
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    View History
+                  </button>
+                  <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => handleDelete(editingItem.id)}
-                      className="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
-                      Delete Item
+                      Delete
                     </button>
-                  </div>
-                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleCancelEdit}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                      className="px-6 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Save Changes
                     </button>
@@ -1282,50 +1283,41 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       )}
 
       {/* Logs Modal */}
-      {showLogs && selectedItemId && (
+      {showLogsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl m-4 max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg m-4">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Item History</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Item History</h3>
                 <button
-                  onClick={() => setShowLogs(false)}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  onClick={() => setShowLogsModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
-              <div className="overflow-y-auto">
+              <div className="max-h-96 overflow-y-auto">
                 {logsLoading ? (
-                  <div className="flex justify-center items-center h-32">
-                    <span className="text-gray-600">Loading logs...</span>
-                  </div>
+                  <div className="p-4 text-center text-gray-700">Loading logs...</div>
                 ) : logs.length === 0 ? (
-                  <div className="text-center text-gray-600 py-8">
-                    No history available for this item
-                  </div>
+                  <div className="p-4 text-center text-gray-700">No history found</div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="divide-y">
                     {logs.map((log) => (
-                      <div key={log.id} className="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded-r-lg">
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span className="font-medium">{log.user_email}</span>
+                      <div key={log.id} className="p-3 text-sm">
+                        <div className="flex justify-between text-gray-900 font-medium">
                           <span>{new Date(log.timestamp).toLocaleString()}</span>
+                          <span className="text-blue-600">{log.user_email}</span>
                         </div>
-                        <div className="mt-2">
-                          {log.action_type === 'edit' ? (
-                            <p className="text-gray-700">
-                              Changed <span className="font-semibold">{log.field_name}</span> from{' '}
-                              <span className="text-red-600">{log.old_value}</span> to{' '}
-                              <span className="text-green-600">{log.new_value}</span>
-                            </p>
-                          ) : log.action_type === 'create' ? (
-                            <p className="text-green-700">Created item</p>
-                          ) : (
-                            <p className="text-red-700">Deleted item</p>
-                          )}
-                        </div>
+                        {log.action_type === 'create' ? (
+                          <div className="mt-1 text-green-600 font-medium">Item created</div>
+                        ) : (
+                          <div className="mt-1 text-gray-800">
+                            Changed <span className="font-medium text-blue-600">{log.field_name}</span> from{' '}
+                            <span className="font-medium text-red-500">"{log.old_value}"</span> to{' '}
+                            <span className="font-medium text-green-600">"{log.new_value}"</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
