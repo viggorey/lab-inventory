@@ -1186,7 +1186,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     <button
                       type="button"
                       onClick={() => handleDelete(editingItem.id)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete
