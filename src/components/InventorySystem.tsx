@@ -151,8 +151,7 @@ const InventorySystem = () => {
   const [totalItems, setTotalItems] = useState(0);
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
   
-  const [showLogs, setShowLogs] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [showLogsModal, setShowLogsModal] = useState(false);
   const [logs, setLogs] = useState<InventoryLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [showBooking, setShowBooking] = useState(false);
@@ -161,9 +160,6 @@ const InventorySystem = () => {
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const DELETION_PHRASE = "I will delete all of Walter's inventory";
-
-  // Add new state for logs modal
-  const [showLogsModal, setShowLogsModal] = useState(false);
 
   // Keep fetchItems outside useEffect but wrap it in useCallback
   const fetchItems = useCallback(async (fetchAll: boolean = false) => {
@@ -748,28 +744,21 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const handleShowLogs = async (itemId: string) => {
     setLogsLoading(true);
     try {
-      console.log('Fetching logs for item:', itemId);
       const { data, error } = await supabase
         .from('inventory_logs')
         .select('*')
         .eq('item_id', itemId)
         .order('timestamp', { ascending: false });
   
-      if (error) {
-        console.error('Error fetching logs:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Fetched logs:', data);
-      
-      setSelectedItemId(itemId);
-      setShowLogs(true);
       setLogs(data || []);
     } catch (error) {
       console.error('Error fetching logs:', error);
     } finally {
       setLogsLoading(false);
     }
+    setSuccessMessage('');
   };
   
   const handleBook = (item: Item) => {
@@ -1314,8 +1303,8 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         ) : (
                           <div className="mt-1 text-gray-800">
                             Changed <span className="font-medium text-blue-600">{log.field_name}</span> from{' '}
-                            <span className="font-medium text-red-500">"{log.old_value}"</span> to{' '}
-                            <span className="font-medium text-green-600">"{log.new_value}"</span>
+                            <span className="font-medium text-red-500">&ldquo;{log.old_value}&rdquo;</span> to{' '}
+                            <span className="font-medium text-green-600">&ldquo;{log.new_value}&rdquo;</span>
                           </div>
                         )}
                       </div>
