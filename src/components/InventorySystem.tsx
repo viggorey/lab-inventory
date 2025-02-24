@@ -547,6 +547,10 @@ const InventorySystem = () => {
       setEditingItem(null);
       setShowCommentModal(false);
       await fetchItems();
+      await fetchItems(true);
+      
+      setSuccessMessage('Item updated successfully');
+      setTimeout(() => setSuccessMessage(''), 2000); // Clear after 2 seconds
     } catch (error) {
       console.error('Error updating item:', error);
       alert('Failed to update item. Please try again.');
@@ -780,7 +784,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       {/* Success Message - Place this at the top level */}
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-bounce">
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-300">
           {successMessage}
         </div>
       )}
