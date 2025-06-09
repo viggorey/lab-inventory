@@ -996,7 +996,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {(Object.values(searchTerms).some(term => term !== '') ? filteredItems : items).map((item) => (
+                    {(Object.values(searchTerms).some(term => term !== '') 
+                      ? filteredItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                      : items).map((item) => (
                       <InventoryRow 
                         key={item.id}
                         item={item}
