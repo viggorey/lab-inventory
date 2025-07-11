@@ -30,3 +30,5 @@ export const handleSupabaseError = (error: PostgrestError | null) => {
   }
   return null;
 };
+
+console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
