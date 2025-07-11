@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Download, Calendar, User, Activity, Filter, Search, Clock, Edit, Plus, Trash2, BookOpen } from 'lucide-react';
+import { Download, User, Activity, Edit, Plus, BookOpen } from 'lucide-react';
 
 interface UserActivity {
   id: string;
@@ -61,6 +61,7 @@ const UserActivityDashboard = () => {
 
   useEffect(() => {
     fetchUserStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFilter]);
 
   const fetchUserStats = async () => {
@@ -411,7 +412,7 @@ const UserActivityDashboard = () => {
 
             {/* Activity Timeline */}
             <div className="space-y-4">
-              {filteredActivities.map((activity, index) => (
+              {filteredActivities.map((activity) => (
                 <div key={activity.id} className="border-l-4 border-blue-500 pl-4 py-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -435,8 +436,8 @@ const UserActivityDashboard = () => {
                       {activity.action_type === 'edit' && (
                         <p className="text-sm text-gray-600">
                           Changed <span className="font-medium">{activity.field_name}</span> from{' '}
-                          <span className="text-red-600">"{activity.old_value}"</span> to{' '}
-                          <span className="text-green-600">"{activity.new_value}"</span>
+                          <span className="text-red-600">&quot;{activity.old_value}&quot;</span> to{' '}
+                          <span className="text-green-600">&quot;{activity.new_value}&quot;</span>
                         </p>
                       )}
                     </div>
