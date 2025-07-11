@@ -123,7 +123,9 @@ const UserActivityDashboard = () => {
       logs?.forEach(log => {
         if (stats[log.user_email]) {
           stats[log.user_email].totalActions++;
-          stats[log.user_email][log.action_type + 's']++;
+          if (log.action_type === 'create') stats[log.user_email].creates++;
+          else if (log.action_type === 'edit') stats[log.user_email].edits++;
+          else if (log.action_type === 'delete') stats[log.user_email].deletes++;
           if (new Date(log.timestamp) > new Date(stats[log.user_email].lastActivity)) {
             stats[log.user_email].lastActivity = log.timestamp;
           }
