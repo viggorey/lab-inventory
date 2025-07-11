@@ -5,9 +5,10 @@ import { Download, Upload, LogOut, Box, Search, MessageSquare, ClipboardList, Tr
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
+import UserActivityDashboard from './UserActivityDashboard';
 import AutocompleteInput from '@/components/AutocompleteInput';
 import Pagination from '@/components/Pagination';
-import { Calendar, Edit, X } from 'lucide-react';
+import { Calendar, Edit, X, Activity } from 'lucide-react';
 import BookingModal from '@/components/BookingModal';
 import BookingsList from '@/components/BookingsList';
 import CommentModal from '@/components/CommentModal';
@@ -160,6 +161,7 @@ const InventorySystem = () => {
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const DELETION_PHRASE = "I will delete all of Walter's inventory";
+  const [showActivityDashboard, setShowActivityDashboard] = useState(false);
 
   // Keep fetchItems outside useEffect but wrap it in useCallback
   const fetchItems = useCallback(async (fetchAll: boolean = false) => {
@@ -936,6 +938,13 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       onChange={handleImport}
                       className="hidden"
                     />
+                    <button 
+                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                      onClick={() => setShowActivityDashboard(true)}
+                    >
+                      <Activity className="w-4 h-4" />
+                      User Activity Dashboard
+                    </button>
                   </>
                 )}
               </div>
@@ -1400,6 +1409,26 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
           onSubmit={() => setShowCommentModal(false)}
           title="Edit Comment"
         />
+      )}
+
+      {/* Activity Dashboard Modal */}
+      {showActivityDashboard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-7xl h-5/6 m-4 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-semibold text-gray-900">User Activity Dashboard</h3>
+              <button
+                onClick={() => setShowActivityDashboard(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="h-full overflow-y-auto">
+              <UserActivityDashboard />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
