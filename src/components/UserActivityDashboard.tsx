@@ -13,9 +13,12 @@ interface UserActivity {
   new_value?: string;
   timestamp: string;
   item_id?: string;
-  item_name?: string;
-  item_category?: string;
-  item_location?: string;
+  // Add this for joined item
+  item?: {
+    name?: string;
+    category?: string;
+    location?: string;
+  };
 }
 
 interface UserBooking {
@@ -23,12 +26,15 @@ interface UserBooking {
   user_id: string;
   user_email: string;
   item_id: string;
-  item_name: string;
+  // Add this for joined item
+  item?: {
+    name?: string;
+  };
   start_datetime: string;
   end_datetime: string;
+  booked_at: string;
   status: string;
   purpose?: string;
-  created_at: string;
 }
 
 interface UserProfile {
@@ -98,8 +104,8 @@ const UserActivityDashboard = () => {
           *,
           item:inventory(name)
         `)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at', { ascending: false });
+        .gte('booked_at', startDate.toISOString())
+        .order('booked_at', { ascending: false });
 
       if (bookingsError) throw bookingsError;
 
@@ -138,8 +144,8 @@ const UserActivityDashboard = () => {
         if (userEmail && stats[userEmail]) {
           stats[userEmail].bookings++;
           stats[userEmail].totalActions++;
-          if (new Date(booking.created_at) > new Date(stats[userEmail].lastActivity)) {
-            stats[userEmail].lastActivity = booking.created_at;
+          if (new Date(booking.booked_at) > new Date(stats[userEmail].lastActivity)) {
+            stats[userEmail].lastActivity = booking.booked_at;
           }
         }
       });
@@ -184,8 +190,8 @@ const UserActivityDashboard = () => {
             item:inventory(name)
           `)
           .eq('user_id', user.id)
-          .gte('created_at', startDate.toISOString())
-          .order('created_at', { ascending: false });
+          .gte('booked_at', startDate.toISOString())
+          .order('booked_at', { ascending: false });
 
         if (bookingsError) throw bookingsError;
         setUserBookings(bookings || []);
@@ -200,7 +206,7 @@ const UserActivityDashboard = () => {
 
   const filteredActivities = userActivities.filter(activity => {
     if (actionFilter !== 'all' && activity.action_type !== actionFilter) return false;
-    if (searchTerm && !activity.item_name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (searchTerm && !activity.item?.name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
@@ -223,14 +229,16 @@ const UserActivityDashboard = () => {
     csvContent += `Timestamp,Action,Item,Field,Old Value,New Value\n`;
     
     activities.forEach(activity => {
-      csvContent += `${new Date(activity.timestamp).toLocaleString()},${activity.action_type},${activity.item_name || 'Unknown'},${activity.field_name || ''},"${activity.old_value || ''}","${activity.new_value || ''}"\n`;
+      const isEdit = activity.action_type === 'edit';
+      const itemName = activity.item?.name ? activity.item.name : 'Unknown';
+      csvContent += `${new Date(activity.timestamp).toLocaleString()},${activity.action_type},${itemName},${isEdit ? activity.field_name || '' : ''},${isEdit ? '"' + (activity.old_value || '') + '"' : ''},${isEdit ? '"' + (activity.new_value || '') + '"' : ''}\n`;
     });
 
     csvContent += `\nBooking Details:\n`;
     csvContent += `Created,Start Date,End Date,Item,Status,Purpose\n`;
     
     bookings.forEach(booking => {
-      csvContent += `${new Date(booking.created_at).toLocaleString()},${new Date(booking.start_datetime).toLocaleString()},${new Date(booking.end_datetime).toLocaleString()},${booking.item_name || 'Unknown'},${booking.status},"${booking.purpose || ''}"\n`;
+      csvContent += `${new Date(booking.booked_at).toLocaleString()},${new Date(booking.start_datetime).toLocaleString()},${new Date(booking.end_datetime).toLocaleString()},${booking.item?.name || 'Unknown'},${booking.status},"${booking.purpose || ''}"\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -269,7 +277,7 @@ const UserActivityDashboard = () => {
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white border border-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 hover:bg-gray-800 transition-colors shadow"
               >
                 <option value="7">Last 7 days</option>
                 <option value="30">Last 30 days</option>
@@ -397,13 +405,13 @@ const UserActivityDashboard = () => {
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-800 rounded-lg text-gray-900 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-blue-500"
                 />
               </div>
               <select
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                className="px-4 py-2 border border-gray-800 rounded-lg text-gray-900 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-blue-500"
               >
                 <option value="all">All Actions</option>
                 <option value="create">Creates</option>
@@ -433,7 +441,7 @@ const UserActivityDashboard = () => {
                         )}
                       </div>
                       <p className="font-medium text-gray-900">
-                        {activity.item_name || 'Unknown Item'}
+                        {activity.item?.name ? activity.item.name : 'Unknown Item'}
                       </p>
                       {activity.action_type === 'edit' && (
                         <p className="text-sm text-gray-600">
@@ -444,8 +452,8 @@ const UserActivityDashboard = () => {
                       )}
                     </div>
                     <div className="text-right text-sm text-gray-500">
-                      <p>{activity.item_category}</p>
-                      <p>{activity.item_location}</p>
+                      <p>{activity.item?.category}</p>
+                      <p>{activity.item?.location}</p>
                     </div>
                   </div>
                 </div>
@@ -459,10 +467,11 @@ const UserActivityDashboard = () => {
                       <div key={booking.id} className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900">{booking.item_name}</p>
+                            <p className="font-medium text-gray-900">{booking.item?.name || 'Unknown Item'}</p>
                             <p className="text-sm text-gray-600">
                               {new Date(booking.start_datetime).toLocaleString()} - {new Date(booking.end_datetime).toLocaleString()}
                             </p>
+                            <p className="text-sm text-gray-600">Booked: {new Date(booking.booked_at).toLocaleString()}</p>
                             <p className="text-sm text-gray-600">Purpose: {booking.purpose || 'No purpose specified'}</p>
                           </div>
                           <span className={`px-2 py-1 rounded text-xs ${

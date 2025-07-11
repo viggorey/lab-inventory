@@ -1414,7 +1414,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       {/* Activity Dashboard Modal */}
       {showActivityDashboard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-7xl h-5/6 m-4 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-7xl max-h-[90vh] m-4 flex flex-col overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b">
               <h3 className="text-xl font-semibold text-gray-900">User Activity Dashboard</h3>
               <button
@@ -1424,7 +1424,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="h-full overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pb-8">
               <UserActivityDashboard />
             </div>
           </div>
