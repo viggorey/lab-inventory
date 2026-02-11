@@ -1,0 +1,110 @@
+## SETUP & DEVELOPMENT
+
+### Initial Setup
+1. Install Node.js: https://nodejs.org/ (LTS version)
+2. Install Vercel CLI: `npm install -g vercel`
+3. Install project dependencies: `npm install`
+4. Create `.env.local` file with Supabase credentials (see SUPABASE section)
+
+### Run Development Server
+```bash
+cd C:\Users\viggo\code\lab-inventory
+npm run dev
+```
+Then open: http://localhost:3000
+
+### Python Environment (for Excel scripts)
+```bash
+# Create conda environment
+conda create -n labinventory python=3.10
+conda activate labinventory
+
+# Install Python packages
+pip install pandas openpyxl
+```
+
+### Upload to github and vercel
+https://www.youtube.com/watch?v=2tQNI9NuBUo&t=149s
+git remote -v
+git remote remove origin
+git remote add origin https://github.com/viggorey/lab-inventory.git
+git branch -M main
+git push -u origin main
+
+git add .
+git commit -m "upload to repository"
+git push
+
+
+### SUPABASE
+
+Supabase Organisation: The Federle Lab
+Supabase password: CamponotusLigniperdus1
+https://supabase.com/dashboard/project/lmijffjvwpfmvccbgiyr/building
+
+(Project settings>API)
+Project URL: https://lmijffjvwpfmvccbgiyr.supabase.co
+anon/public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaWpmZmp2d3BmbXZjY2JnaXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NTgzMzIsImV4cCI6MjA1NDQzNDMzMn0.o-HyE-oUtF85k-hk1pJGJEyiTvLDuC1VNLf9dqsAgfA
+
+## Environment Variables
+Create `.env.local` file in project root with:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://lmijffjvwpfmvccbgiyr.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtaWpmZmp2d3BmbXZjY2JnaXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NTgzMzIsImV4cCI6MjA1NDQzNDMzMn0.o-HyE-oUtF85k-hk1pJGJEyiTvLDuC1VNLf9dqsAgfA
+```
+
+**Important:** For Vercel deployment, add these same environment variables in:
+Vercel Dashboard → Project Settings → Environment Variables
+
+## Supabase CLI (Optional - for local development)
+Install: `npm install -g supabase-cli`
+
+Linking account:
+```bash
+supabase login
+supabase link --project-ref lmijffjvwpfmvccbgiyr
+```
+
+
+
+
+
+
+
+
+
+
+## DELETING A USER
+
+BEGIN;
+
+-- Delete related records
+DELETE FROM public.profiles WHERE id = 'user_uuid_here';
+DELETE FROM public.inventory_bookings WHERE user_id = 'user_uuid_here';
+DELETE FROM public.inventory_logs WHERE user_id = 'user_uuid_here';
+
+-- Delete user from authentication
+DELETE FROM auth.users WHERE id = 'user_uuid_here';
+
+COMMIT;
+
+
+
+
+## MAKE FIRST ADMIN
+
+-- Update the user's role in the profiles table
+UPDATE profiles
+SET role = 'admin'
+WHERE email = 'your-email@example.com';
+
+## INSTALLED TOOLS
+- Node.js: v24.12.0
+- npm: 11.6.2
+- Vercel CLI: 50.1.6
+- Docker Desktop (optional, for containerized development)
+- Conda (for Python environment)
+
+
+
+

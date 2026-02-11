@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/hooks/useAuth';
+import Navigation from '@/components/layout/Navigation';
 
 const AuthForm = dynamic(() => import('@/components/AuthForm'), { ssr: false });
 const PendingApproval = dynamic(() => import('@/components/PendingApproval'), { ssr: false });
+const PublicationsSystem = dynamic(() => import('@/components/publications/PublicationsSystem'), { ssr: false });
 
 function LoadingState() {
   return (
@@ -16,16 +16,8 @@ function LoadingState() {
   );
 }
 
-export default function Home() {
-  const router = useRouter();
-  const { user, userRole, loading, error, isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    // Redirect authenticated users to inventory page
-    if (!loading && isAuthenticated) {
-      router.replace('/inventory');
-    }
-  }, [loading, isAuthenticated, router]);
+export default function PublicationsPage() {
+  const { user, userRole, loading, error, isAdmin, signOut } = useAuth();
 
   if (loading) {
     return <LoadingState />;
@@ -56,9 +48,15 @@ export default function Home() {
     return <PendingApproval />;
   }
 
-  // If authenticated, show loading while redirecting
-  if (isAuthenticated) {
-    return <LoadingState />;
+  if (userRole === 'admin' || userRole === 'user') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <Navigation isAdmin={isAdmin} onLogout={signOut} />
+          <PublicationsSystem isAdmin={isAdmin} />
+        </div>
+      </div>
+    );
   }
 
   return <LoadingState />;

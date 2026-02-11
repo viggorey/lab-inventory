@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, memo} from 'react';
-import { Download, Upload, LogOut, Box, Search, MessageSquare, ClipboardList, Trash2 } from 'lucide-react';import { uniq } from 'lodash';
+import { Download, Upload, Search, MessageSquare, ClipboardList, Trash2 } from 'lucide-react';import { uniq } from 'lodash';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
@@ -661,21 +661,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
   }
 };
 
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Error signing out:', error);
-        return;
-      }
-      // Force a page refresh after successful logout
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Unexpected error during sign out:', error);
-    }
-  };
-
   const handleDeleteAllInventory = async () => {
     if (deleteConfirmation !== DELETION_PHRASE) {
       alert('Please type the confirmation phrase exactly as shown');
@@ -787,30 +772,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         </div>
       ) : (
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-600 p-2 rounded-lg">
-                  <Box className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Lab Inventory Management
-                </h2>
-              </div>
-              <div className="flex items-center gap-4">
-                {isAdmin && <span className="text-blue-600 font-semibold">Admin</span>}
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* User Management Section */}
           {isAdmin && (
             <div className="bg-white rounded-xl shadow-lg">
