@@ -37,9 +37,15 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  const initialLoadDone = React.useRef(false);
+
   const fetchManuals = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show the full loading spinner on the very first fetch.
+      // Subsequent refreshes update data silently so form state is kept.
+      if (!initialLoadDone.current) {
+        setLoading(true);
+      }
       const { data, error } = await supabase
         .from('manuals')
         .select(`
@@ -50,6 +56,7 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
 
       if (error) throw error;
       setManuals((data as ManualWithEquipment[]) || []);
+      initialLoadDone.current = true;
     } catch (error) {
       console.error('Error fetching manuals:', error);
     } finally {

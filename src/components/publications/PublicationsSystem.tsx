@@ -42,9 +42,15 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  const initialLoadDone = React.useRef(false);
+
   const fetchPublications = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show the full loading spinner on the very first fetch.
+      // Subsequent refreshes update data silently so form state is kept.
+      if (!initialLoadDone.current) {
+        setLoading(true);
+      }
       const { data, error } = await supabase
         .from('publications')
         .select(`
@@ -55,6 +61,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
 
       if (error) throw error;
       setPublications((data as PublicationWithCategory[]) || []);
+      initialLoadDone.current = true;
     } catch (error) {
       console.error('Error fetching publications:', error);
     } finally {

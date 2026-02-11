@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -25,9 +25,19 @@ export function useAuth() {
     isAuthenticated: false,
   });
 
+  // Track whether initial load has completed so that subsequent auth
+  // refreshes (e.g. token refresh on tab focus) don't show the loading
+  // spinner and unmount the current page components.
+  const initialLoadDone = useRef(false);
+
   const checkSession = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      // Only show the loading spinner on the very first check.
+      // Subsequent checks (e.g. triggered by onAuthStateChange when the
+      // user returns to the tab) run silently so form state is preserved.
+      if (!initialLoadDone.current) {
+        setState(prev => ({ ...prev, loading: true, error: null }));
+      }
 
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
@@ -42,6 +52,7 @@ export function useAuth() {
           isAdmin: false,
           isAuthenticated: false,
         });
+        initialLoadDone.current = true;
         return;
       }
 
@@ -90,6 +101,7 @@ export function useAuth() {
           isAdmin: role === 'admin',
           isAuthenticated: role === 'admin' || role === 'user',
         });
+        initialLoadDone.current = true;
       }
     } catch (error) {
       console.error('Session check error:', error);
@@ -98,6 +110,7 @@ export function useAuth() {
         loading: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred',
       }));
+      initialLoadDone.current = true;
     }
   }, []);
 
