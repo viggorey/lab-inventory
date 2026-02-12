@@ -16,6 +16,7 @@ import CommentModal from '@/components/CommentModal';
 import { Item } from '@/types/inventory';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { InventoryPageSkeleton } from '@/components/Skeleton';
 
 const DEBUG = process.env.NODE_ENV === 'development';
 
@@ -478,7 +479,7 @@ const InventorySystem = () => {
   
       } catch (error) {
         console.error('Error during deletion process:', error);
-        alert('Failed to delete item. Please try again.');
+        showToast('Failed to delete item. Please try again.', 'error');
       }
     }
   };
@@ -566,7 +567,7 @@ const InventorySystem = () => {
       setTimeout(() => setSuccessMessage(''), 2000); // Clear after 2 seconds
     } catch (error) {
       console.error('Error updating item:', error);
-      alert('Failed to update item. Please try again.');
+      showToast('Failed to update item. Please try again.', 'error');
     }
   };
 
@@ -603,7 +604,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = files[0];
 
     if (file.size > MAX_FILE_SIZE) {
-      alert('File is too large. Maximum size is 5MB.');
+      showToast('File is too large. Maximum size is 5MB.', 'error');
       e.target.value = '';
       return;
     }
@@ -660,13 +661,13 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
           if (error) throw error;
   
           await fetchItems();
-          alert(`Import successful! ${transformedData.length} items imported.`);
+          showToast(`Import successful! ${transformedData.length} items imported.`, 'success');
         } catch (error) {
           const errorMessage = error instanceof Error 
             ? error.message 
             : 'An unknown error occurred during file import';
           
-          alert(errorMessage);
+          showToast(errorMessage, 'error');
         }
       }
     };
@@ -677,7 +678,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   const handleDeleteAllInventory = async () => {
     if (deleteConfirmation !== DELETION_PHRASE) {
-      alert('Please type the confirmation phrase exactly as shown');
+      showToast('Please type the confirmation phrase exactly as shown', 'error');
       return;
     }
   
@@ -713,10 +714,10 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       // Refresh the inventory lists
       await fetchItems();
       
-      alert('All inventory items have been deleted');
+      showToast('All inventory items have been deleted', 'success');
     } catch (error) {
       console.error('Error deleting inventory:', error);
-      alert('Failed to delete inventory. Please try again.');
+      showToast('Failed to delete inventory. Please try again.', 'error');
     }
   };
 
@@ -767,7 +768,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <InventoryPageSkeleton />;
   }
 
   return (
@@ -779,11 +780,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         </div>
       )}
   
-      {loading ? (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-lg text-gray-600">Loading...</div>
-        </div>
-      ) : (
         <div className="max-w-7xl mx-auto space-y-6">
           {/* User Management Section */}
           {isAdmin && (
@@ -1039,7 +1035,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
             </div>
           )}
         </div>
-      )}
 
       {/* Modals */}
       {/* Edit Modal */}

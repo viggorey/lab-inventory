@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Calendar, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
+import { BookingsListSkeleton } from '@/components/Skeleton';
 
 interface Booking {
   id: string;
@@ -15,7 +18,37 @@ interface Booking {
   }
 }
 
+const BookingItem = memo(({ booking, onCancel }: {
+  booking: Booking;
+  onCancel: (id: string) => void;
+}) => (
+  <div className="border rounded-lg p-4 flex justify-between items-center">
+    <div>
+      <h3 className="font-semibold">{booking.item.name}</h3>
+      <p className="text-sm text-gray-600">
+        Quantity: {booking.quantity}
+      </p>
+      <p className="text-sm text-gray-600">
+        {new Date(booking.start_datetime).toLocaleString()} - {new Date(booking.end_datetime).toLocaleString()}
+      </p>
+      {booking.purpose && (
+        <p className="text-sm text-gray-400 italic">{booking.purpose}</p>
+      )}
+    </div>
+    <button
+      onClick={() => onCancel(booking.id)}
+      className="text-red-600 hover:text-red-800"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  </div>
+));
+
+BookingItem.displayName = 'BookingItem';
+
 const BookingsList = () => {
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -48,22 +81,28 @@ const BookingsList = () => {
     }
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-  
+  const handleCancelBooking = useCallback(async (bookingId: string) => {
+    const confirmed = await confirm({
+      title: 'Cancel Booking',
+      message: 'Are you sure you want to cancel this booking?',
+      variant: 'danger',
+      confirmLabel: 'Cancel Booking',
+    });
+    if (!confirmed) return;
+
     try {
       const { error } = await supabase
         .from('inventory_bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId);
-  
+
       if (error) throw error;
       await fetchUserBookings();
     } catch (error) {
       console.error('Error cancelling booking:', error);
-      alert('Failed to cancel booking');
+      showToast('Failed to cancel booking', 'error');
     }
-  };
+  }, [confirm, showToast]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -84,32 +123,13 @@ const BookingsList = () => {
         isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
       }`}>
         {loading ? (
-          <div className="text-center py-4 text-gray-900">Loading bookings...</div>
+          <BookingsListSkeleton />
         ) : bookings.length === 0 ? (
           <div className="text-center py-4 text-gray-900">No active bookings</div>
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="border rounded-lg p-4 flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">{booking.item.name}</h3>
-                  <p className="text-sm text-gray-600">
-                    Quantity: {booking.quantity}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {new Date(booking.start_datetime).toLocaleString()} - {new Date(booking.end_datetime).toLocaleString()}
-                  </p>
-                  {booking.purpose && (
-                    <p className="text-sm text-gray-400 italic">{booking.purpose}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleCancelBooking(booking.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <BookingItem key={booking.id} booking={booking} onCancel={handleCancelBooking} />
             ))}
           </div>
         )}

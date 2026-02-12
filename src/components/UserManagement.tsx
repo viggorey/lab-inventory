@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { UserCheck, UserX, User, ChevronDown, ChevronUp, Loader } from 'lucide-react';
 
@@ -12,6 +12,64 @@ interface UserProfile {
   full_name: string | null;
   created_at: string;
 }
+
+const UserRow = memo(({ user, onUpdateRole }: {
+  user: UserProfile;
+  onUpdateRole: (userId: string, newRole: string) => void;
+}) => (
+  <tr>
+    <td className="border p-2 text-gray-900">{user.email}</td>
+    <td className="border p-2">
+      <span
+        className={`inline-block px-2 py-1 rounded ${
+          user.role === 'admin'
+            ? 'bg-purple-100 text-purple-800'
+            : user.role === 'pending'
+            ? 'bg-yellow-100 text-yellow-800'
+            : 'bg-blue-100 text-blue-800'
+        }`}
+      >
+        {user.role}
+      </span>
+    </td>
+    <td className="border p-2 text-gray-900">
+      {new Date(user.created_at).toLocaleDateString()}
+    </td>
+    <td className="border p-2">
+      <div className="flex gap-2 justify-center">
+        {user.role === 'pending' && (
+          <>
+            <button
+              onClick={() => onUpdateRole(user.id, 'user')}
+              className="flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+            >
+              <UserCheck className="w-4 h-4" />
+              Approve
+            </button>
+            <button
+              onClick={() => onUpdateRole(user.id, 'denied')}
+              className="flex items-center gap-1 bg-red-400/80 text-white px-3 py-1 rounded hover:bg-red-500/80"
+            >
+              <UserX className="w-4 h-4" />
+              Deny
+            </button>
+          </>
+        )}
+        {user.role === 'user' && (
+          <button
+            onClick={() => onUpdateRole(user.id, 'admin')}
+            className="flex items-center gap-1 bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
+          >
+            <User className="w-4 h-4" />
+            Make Admin
+          </button>
+        )}
+      </div>
+    </td>
+  </tr>
+));
+
+UserRow.displayName = 'UserRow';
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -64,7 +122,7 @@ const UserManagement = () => {
   };
   
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = useCallback(async (userId: string, newRole: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -136,15 +194,25 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
-
+  }, []);
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
   if (loading) {
-    return <div className="text-center p-4">Loading users...</div>;
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 w-48 bg-gray-200 rounded" />
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-10 bg-gray-200 rounded" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
 
@@ -219,56 +287,7 @@ const UserManagement = () => {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="border p-2 text-gray-900">{user.email}</td>
-                    <td className="border p-2">
-                      <span
-                        className={`inline-block px-2 py-1 rounded ${
-                          user.role === 'admin'
-                            ? 'bg-purple-100 text-purple-800'
-                            : user.role === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="border p-2 text-gray-900">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="border p-2">
-                      <div className="flex gap-2 justify-center">
-                        {user.role === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => updateUserRole(user.id, 'user')}
-                              className="flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                            >
-                              <UserCheck className="w-4 h-4" />
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => updateUserRole(user.id, 'denied')}
-                              className="flex items-center gap-1 bg-red-400/80 text-white px-3 py-1 rounded hover:bg-red-500/80"
-                            >
-                              <UserX className="w-4 h-4" />
-                              Deny
-                            </button>
-                          </>
-                        )}
-                        {user.role === 'user' && (
-                          <button
-                            onClick={() => updateUserRole(user.id, 'admin')}
-                            className="flex items-center gap-1 bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
-                          >
-                            <User className="w-4 h-4" />
-                            Make Admin
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                  <UserRow key={user.id} user={user} onUpdateRole={updateUserRole} />
                 ))}
               </tbody>
             </table>
