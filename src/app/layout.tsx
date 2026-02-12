@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Lab Inventory System",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-blue-50">
       <body className="antialiased bg-blue-50 min-h-screen">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

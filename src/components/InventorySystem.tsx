@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, memo} from 'react';
-import { Download, Upload, Search, MessageSquare, ClipboardList, Trash2 } from 'lucide-react';import { uniq } from 'lodash';
+import { Download, Upload, Search, MessageSquare, ClipboardList, Trash2, FileText } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import UserManagement from './UserManagement';
@@ -13,6 +14,8 @@ import BookingModal from '@/components/BookingModal';
 import BookingsList from '@/components/BookingsList';
 import CommentModal from '@/components/CommentModal';
 import { Item } from '@/types/inventory';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 const DEBUG = process.env.NODE_ENV === 'development';
 
@@ -47,11 +50,13 @@ const formatFileSize = (bytes: number): string => {
   return `${Math.round(size)}${units[unitIndex]}`;
 };
 
-const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
+const InventoryRow = memo(({ item, isAdmin, onEdit, onBook, manualCount, onManualClick }: {
   item: Item;
   isAdmin: boolean;
   onEdit: (item: Item) => void;
   onBook: (item: Item) => void;
+  manualCount: number;
+  onManualClick: () => void;
 }) => {
   const [showComment, setShowComment] = useState(false);
 
@@ -79,6 +84,16 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-sm bg-gray-50">
           <div className="flex items-center justify-center gap-1">
+            {manualCount > 0 && (
+              <button
+                onClick={onManualClick}
+                className="relative bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors flex items-center gap-1"
+                title={`${manualCount} manual${manualCount > 1 ? 's' : ''} linked`}
+              >
+                <FileText className="w-3 h-3" />
+                <span className="text-xs font-medium">{manualCount}</span>
+              </button>
+            )}
             <button
               onClick={() => onBook(item)}
               className="bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
@@ -114,9 +129,12 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook }: {
 InventoryRow.displayName = 'InventoryRow';
 
 const InventorySystem = () => {
-  const [items, setItems] = useState<Item[]>([]);
+  const router = useRouter();
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [manualCounts, setManualCounts] = useState<Record<string, number>>({});
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
@@ -144,12 +162,8 @@ const InventorySystem = () => {
   });
 
   const [showCommentModal, setShowCommentModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
-  
   const ITEMS_PER_PAGE = 20;
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
   
   const [showLogsModal, setShowLogsModal] = useState(false);
@@ -163,47 +177,44 @@ const InventorySystem = () => {
   const DELETION_PHRASE = "I will delete all of Walter's inventory";
   const [showActivityDashboard, setShowActivityDashboard] = useState(false);
 
-  // Keep fetchItems outside useEffect but wrap it in useCallback
-  const fetchItems = useCallback(async (fetchAll: boolean = false) => {
+  // Fetch all items once, derive paginated view from allItems
+  const fetchItems = useCallback(async () => {
     try {
-      if (DEBUG) console.log(`Starting fetchItems (fetchAll: ${fetchAll})`);
-      
-      const countResponse = await supabase
-        .from('inventory')
-        .select('*', { count: 'exact', head: true });
-      
-      let query = supabase
+      if (DEBUG) console.log('Starting fetchItems');
+
+      const { data, error } = await supabase
         .from('inventory')
         .select('*')
-        .order('category', { ascending: true }) // First, sort by category
-        .order('name', { ascending: true });    // Then, sort by name within categories
-  
-      if (!fetchAll) {
-        query = query.range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
-      }
-  
-      const { data, error } = await query;
-  
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
+
       if (error) throw error;
-  
-      if (fetchAll) {
-        // Sort for all items view
-        const sortedData = data
-          .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-        setAllItems(sortedData || []);
-      } else {
-        // Sort for paginated view
-        const sortedData = data
-          .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-        setItems(sortedData || []);
-      }
-      
-      setTotalItems(countResponse.count || 0);
+
+      const sortedData = (data || [])
+        .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+      setAllItems(sortedData);
     } catch (error) {
       console.error('Error in fetchItems:', error);
     }
-  }, [currentPage]);
+  }, []);
 
+  const fetchManualCounts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('manual_equipment')
+        .select('equipment_id');
+
+      if (error) throw error;
+
+      const counts: Record<string, number> = {};
+      for (const row of data || []) {
+        counts[row.equipment_id] = (counts[row.equipment_id] || 0) + 1;
+      }
+      setManualCounts(counts);
+    } catch (error) {
+      console.error('Error fetching manual counts:', error);
+    }
+  }, []);
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -235,8 +246,8 @@ const InventorySystem = () => {
         
         // Fetch data
         await Promise.all([
-          fetchItems(),      // Fetch paginated items
-          fetchItems(true)   // Fetch all items
+          fetchItems(),
+          fetchManualCounts()
         ]);
       } catch (error) {
         console.error('Error in checkUserRole:', error);
@@ -247,7 +258,7 @@ const InventorySystem = () => {
     };
 
     checkUserRole();
-  }, [fetchItems]);
+  }, [fetchItems, fetchManualCounts]);
 
   // Calculate similarity of item name added (60% warning)
   function levenshteinDistance(str1: string, str2: string): number {
@@ -312,10 +323,10 @@ const InventorySystem = () => {
     if (!isAdmin) return;
   
     try {
-      const similarItems = findSimilarValues(newItem.name, items.map(item => item.name));
+      const similarItems = findSimilarValues(newItem.name, allItems.map(item => item.name));
       const similarCategories = findSimilarValues(
-        newItem.category, 
-        uniq(items.map(item => item.category))
+        newItem.category,
+        [...new Set(allItems.map(item => item.category))]
       );
       
       if (similarItems.length > 0 || similarCategories.length > 0) {
@@ -330,10 +341,10 @@ const InventorySystem = () => {
       await addItem();
     } catch (error) {
       console.error('Error details:', error);
-      alert('Failed to add item. Please try again.');
+      showToast('Failed to add item. Please try again.', 'error');
     }
   };
-  
+
   // Separate function for adding the item
   const addItem = async () => {
     try {
@@ -371,7 +382,7 @@ const InventorySystem = () => {
         console.error('Log creation error:', logError);
       }
   
-      await Promise.all([fetchItems(), fetchItems(true)]);
+      await fetchItems();
   
     // Add success message and clear it after 3 seconds
     setSuccessMessage('Item added successfully!');
@@ -396,14 +407,21 @@ const InventorySystem = () => {
     setShowCommentModal(false);
   } catch (error) {
     console.error('Error details:', error);
-    alert('Failed to add item. Please try again.');
+    showToast('Failed to add item. Please try again.', 'error');
   }
 };
 
 
   const handleDelete = async (itemId: string) => {
     if (!isAdmin) return;
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    const confirmed = await confirm({
+      title: 'Delete Item',
+      message: 'Are you sure you want to delete this item?',
+      variant: 'danger',
+      confirmLabel: 'Delete',
+    });
+    if (!confirmed) return;
+    {
       try {
         console.log('Starting deletion process for item:', itemId);
   
@@ -454,10 +472,7 @@ const InventorySystem = () => {
         setEditingItem(null);
         
         // Refresh the items
-        await Promise.all([
-          fetchItems(),
-          fetchItems(true)
-        ]);
+        await fetchItems();
   
         console.log('Deletion process completed successfully');
   
@@ -546,7 +561,6 @@ const InventorySystem = () => {
       setEditingItem(null);
       setShowCommentModal(false);
       await fetchItems();
-      await fetchItems(true);
       
       setSuccessMessage('Item updated successfully');
       setTimeout(() => setSuccessMessage(''), 2000); // Clear after 2 seconds
@@ -645,7 +659,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
   
           if (error) throw error;
   
-          await Promise.all([fetchItems(), fetchItems(true)]);
+          await fetchItems();
           alert(`Import successful! ${transformedData.length} items imported.`);
         } catch (error) {
           const errorMessage = error instanceof Error 
@@ -698,7 +712,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       
       // Refresh the inventory lists
       await fetchItems();
-      await fetchItems(true);
       
       alert('All inventory items have been deleted');
     } catch (error) {
@@ -817,7 +830,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                           value={newItem.unit}
                           onChange={(value) => setNewItem({...newItem, unit: value})}
                           placeholder="Unit"
-                          items={items}
+                          items={allItems}
                           field="unit"
                         />
                       </div>
@@ -912,6 +925,20 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
               {/* Search and Filters */}
               <div className="mb-6">
+                {Object.values(searchTerms).some(term => term !== '') && (
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={() => {
+                        setSearchTerms({ name: '', quantity: '', category: '', location: '', source: '' });
+                        setCurrentPage(1);
+                      }}
+                      className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      Clear all filters
+                    </button>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {Object.keys(searchTerms).map(key => (
                     <div key={key}>
@@ -966,15 +993,17 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {(Object.values(searchTerms).some(term => term !== '') 
-                      ? filteredItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-                      : items).map((item) => (
-                      <InventoryRow 
+                    {(Object.values(searchTerms).some(term => term !== '')
+                      ? filteredItems
+                      : allItems).slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((item) => (
+                      <InventoryRow
                         key={item.id}
                         item={item}
                         isAdmin={isAdmin}
                         onEdit={handleEdit}
                         onBook={handleBook}
+                        manualCount={manualCounts[item.id] || 0}
+                        onManualClick={() => router.push('/manuals')}
                       />
                     ))}
                   </tbody>
@@ -987,9 +1016,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={Math.ceil(
-                    (Object.values(searchTerms).some(term => term !== '') 
-                      ? filteredItems.length 
-                      : totalItems) 
+                    (Object.values(searchTerms).some(term => term !== '')
+                      ? filteredItems.length
+                      : allItems.length)
                     / ITEMS_PER_PAGE
                   )}
                   onPageChange={setCurrentPage}
@@ -1067,7 +1096,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         value={editingItem.unit || ''}
                         onChange={(value) => setEditingItem(prev => prev ? {...prev, unit: value || null} : null)}
                         placeholder="Unit (optional)"
-                        items={items}
+                        items={allItems}
                         field="unit"
                       />
                     </div>

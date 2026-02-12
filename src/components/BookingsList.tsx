@@ -9,6 +9,7 @@ interface Booking {
   start_datetime: string;
   end_datetime: string;
   status: string;
+  purpose?: string;
   item: {
     name: string;
   }
@@ -98,6 +99,9 @@ const BookingsList = () => {
                   <p className="text-sm text-gray-600">
                     {new Date(booking.start_datetime).toLocaleString()} - {new Date(booking.end_datetime).toLocaleString()}
                   </p>
+                  {booking.purpose && (
+                    <p className="text-sm text-gray-400 italic">{booking.purpose}</p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleCancelBooking(booking.id)}

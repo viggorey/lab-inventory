@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { uploadPDF, deletePDF, getPDFUrl, formatFileSize } from '@/lib/storage';
 import { FileText, Plus, Search, Trash2, Edit3, X, Upload, Eye, Download } from 'lucide-react';
@@ -13,7 +13,7 @@ interface ManualsSystemProps {
 
 const emptyForm: ManualFormData = {
   title: '',
-  equipment_id: null,
+  equipment_ids: [],
   description: '',
   version: '',
 };
@@ -31,6 +31,17 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
   const [equipment, setEquipment] = useState<{ id: string; name: string; category: string }[]>([]);
   const [equipmentSearch, setEquipmentSearch] = useState('');
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false);
+  const equipmentPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (equipmentPickerRef.current && !equipmentPickerRef.current.contains(e.target as Node)) {
+        setShowEquipmentDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -41,8 +52,6 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
 
   const fetchManuals = useCallback(async () => {
     try {
-      // Only show the full loading spinner on the very first fetch.
-      // Subsequent refreshes update data silently so form state is kept.
       if (!initialLoadDone.current) {
         setLoading(true);
       }
@@ -50,7 +59,9 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
         .from('manuals')
         .select(`
           *,
-          equipment:equipment_id (id, name, category)
+          manual_equipment (
+            equipment:equipment_id (id, name, category)
+          )
         `)
         .order('title');
 
@@ -96,24 +107,38 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
 
       const uploadResult = await uploadPDF(pdfFile, 'equipment-manuals', user.id);
 
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('manuals')
         .insert([{
           title: formData.title.trim(),
-          equipment_id: formData.equipment_id || null,
           description: formData.description.trim() || null,
           version: formData.version.trim() || null,
           pdf_path: uploadResult.path,
           pdf_filename: uploadResult.filename,
           pdf_size_bytes: uploadResult.size,
           created_by: user.id,
-        }]);
+        }])
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      // Insert junction rows
+      if (formData.equipment_ids.length > 0 && inserted) {
+        const junctionRows = formData.equipment_ids.map((eqId) => ({
+          manual_id: inserted.id,
+          equipment_id: eqId,
+        }));
+        const { error: junctionError } = await supabase
+          .from('manual_equipment')
+          .insert(junctionRows);
+        if (junctionError) throw junctionError;
+      }
 
       setFormData(emptyForm);
       setPdfFile(null);
       setShowAddForm(false);
+      setEquipmentSearch('');
       showSuccess('Manual added successfully');
       fetchManuals();
     } catch (error) {
@@ -137,7 +162,6 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
 
       const updateData: Record<string, unknown> = {
         title: formData.title.trim(),
-        equipment_id: formData.equipment_id || null,
         description: formData.description.trim() || null,
         version: formData.version.trim() || null,
         updated_at: new Date().toISOString(),
@@ -145,9 +169,7 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
 
       // If a new PDF was uploaded, replace the old one
       if (pdfFile) {
-        // Delete old PDF
         await deletePDF(editingManual.pdf_path, 'equipment-manuals');
-        // Upload new PDF
         const uploadResult = await uploadPDF(pdfFile, 'equipment-manuals', user.id);
         updateData.pdf_path = uploadResult.path;
         updateData.pdf_filename = uploadResult.filename;
@@ -161,9 +183,28 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
 
       if (error) throw error;
 
+      // Update junction rows: delete existing, re-insert
+      const { error: deleteError } = await supabase
+        .from('manual_equipment')
+        .delete()
+        .eq('manual_id', editingManual.id);
+      if (deleteError) throw deleteError;
+
+      if (formData.equipment_ids.length > 0) {
+        const junctionRows = formData.equipment_ids.map((eqId) => ({
+          manual_id: editingManual.id,
+          equipment_id: eqId,
+        }));
+        const { error: junctionError } = await supabase
+          .from('manual_equipment')
+          .insert(junctionRows);
+        if (junctionError) throw junctionError;
+      }
+
       setEditingManual(null);
       setFormData(emptyForm);
       setPdfFile(null);
+      setEquipmentSearch('');
       showSuccess('Manual updated successfully');
       fetchManuals();
     } catch (error) {
@@ -178,10 +219,8 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
     if (!confirm(`Delete "${manual.title}"? This will also delete the PDF file.`)) return;
 
     try {
-      // Delete PDF from storage
       await deletePDF(manual.pdf_path, 'equipment-manuals');
 
-      // Delete record from database
       const { error } = await supabase
         .from('manuals')
         .delete()
@@ -211,21 +250,32 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
     `${eq.name} (${eq.category})`.toLowerCase().includes(equipmentSearch.toLowerCase())
   );
 
-  const selectEquipment = (eqId: string | null, eqLabel: string) => {
-    setFormData({ ...formData, equipment_id: eqId });
-    setEquipmentSearch(eqLabel);
-    setShowEquipmentDropdown(false);
+  const toggleEquipment = (eqId: string) => {
+    setFormData((prev) => {
+      const ids = prev.equipment_ids.includes(eqId)
+        ? prev.equipment_ids.filter((id) => id !== eqId)
+        : [...prev.equipment_ids, eqId];
+      return { ...prev, equipment_ids: ids };
+    });
+  };
+
+  const removeEquipment = (eqId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      equipment_ids: prev.equipment_ids.filter((id) => id !== eqId),
+    }));
   };
 
   const openEditModal = (manual: ManualWithEquipment) => {
     setEditingManual(manual);
+    const ids = manual.manual_equipment?.map((me) => me.equipment.id) || [];
     setFormData({
       title: manual.title,
-      equipment_id: manual.equipment_id,
+      equipment_ids: ids,
       description: manual.description || '',
       version: manual.version || '',
     });
-    setEquipmentSearch(manual.equipment ? `${manual.equipment.name} (${manual.equipment.category})` : '');
+    setEquipmentSearch('');
     setShowEquipmentDropdown(false);
     setPdfFile(null);
   };
@@ -233,7 +283,9 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
   const handleExport = () => {
     const exportData = manuals.map(m => ({
       title: m.title,
-      equipment: m.equipment ? `${m.equipment.name} (${m.equipment.category})` : '',
+      equipment: m.manual_equipment
+        ? m.manual_equipment.map((me) => `${me.equipment.name} (${me.equipment.category})`).join('; ')
+        : '',
       version: m.version || '',
       description: m.description || '',
       pdf_filename: m.pdf_filename,
@@ -296,10 +348,84 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
     return (
       manual.title.toLowerCase().includes(term) ||
       (manual.description && manual.description.toLowerCase().includes(term)) ||
-      (manual.equipment?.name && manual.equipment.name.toLowerCase().includes(term)) ||
+      (manual.manual_equipment?.some((me) => me.equipment.name.toLowerCase().includes(term))) ||
       (manual.version && manual.version.toLowerCase().includes(term))
     );
   });
+
+  // Selected equipment labels for chips display
+  const selectedEquipmentItems = formData.equipment_ids
+    .map((id) => equipment.find((eq) => eq.id === id))
+    .filter(Boolean) as { id: string; name: string; category: string }[];
+
+  // Equipment picker component (shared between add form and edit modal)
+  const EquipmentPicker = () => (
+    <div className="relative" ref={equipmentPickerRef}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Linked Equipment
+      </label>
+      {/* Selected chips */}
+      {selectedEquipmentItems.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {selectedEquipmentItems.map((eq) => (
+            <span
+              key={eq.id}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+            >
+              {eq.name}
+              <button
+                type="button"
+                onClick={() => removeEquipment(eq.id)}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        type="text"
+        value={equipmentSearch}
+        onChange={(e) => {
+          setEquipmentSearch(e.target.value);
+          setShowEquipmentDropdown(true);
+        }}
+        onFocus={() => setShowEquipmentDropdown(true)}
+        placeholder="Search equipment to add..."
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
+      />
+      {showEquipmentDropdown && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {filteredEquipment.map((eq) => {
+            const isSelected = formData.equipment_ids.includes(eq.id);
+            return (
+              <button
+                type="button"
+                key={eq.id}
+                onClick={() => {
+                  toggleEquipment(eq.id);
+                }}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                  isSelected
+                    ? 'bg-blue-50 text-blue-800 font-medium'
+                    : 'text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <span className="flex items-center justify-between">
+                  <span>{eq.name} ({eq.category})</span>
+                  {isSelected && <span className="text-blue-600 text-xs">Selected</span>}
+                </span>
+              </button>
+            );
+          })}
+          {filteredEquipment.length === 0 && (
+            <div className="px-3 py-2 text-sm text-gray-400">No matches</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -402,47 +528,7 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
               />
             </div>
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Linked Equipment
-              </label>
-              <input
-                type="text"
-                value={equipmentSearch}
-                onChange={(e) => {
-                  setEquipmentSearch(e.target.value);
-                  setShowEquipmentDropdown(true);
-                  if (!e.target.value) setFormData({ ...formData, equipment_id: null });
-                }}
-                onFocus={() => setShowEquipmentDropdown(true)}
-                placeholder="Search equipment..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
-              />
-              {showEquipmentDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  <button
-                    type="button"
-                    onClick={() => selectEquipment(null, '')}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                  >
-                    None
-                  </button>
-                  {filteredEquipment.map((eq) => (
-                    <button
-                      type="button"
-                      key={eq.id}
-                      onClick={() => selectEquipment(eq.id, `${eq.name} (${eq.category})`)}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-blue-50"
-                    >
-                      {eq.name} ({eq.category})
-                    </button>
-                  ))}
-                  {filteredEquipment.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-400">No matches</div>
-                  )}
-                </div>
-              )}
-            </div>
+            <EquipmentPicker />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
               <input
@@ -525,10 +611,17 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {manual.equipment ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {manual.equipment.name}
-                      </span>
+                    {manual.manual_equipment && manual.manual_equipment.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {manual.manual_equipment.map((me) => (
+                          <span
+                            key={me.equipment.id}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {me.equipment.name}
+                          </span>
+                        ))}
+                      </div>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
@@ -607,47 +700,7 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
                   />
                 </div>
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Linked Equipment
-                  </label>
-                  <input
-                    type="text"
-                    value={equipmentSearch}
-                    onChange={(e) => {
-                      setEquipmentSearch(e.target.value);
-                      setShowEquipmentDropdown(true);
-                      if (!e.target.value) setFormData({ ...formData, equipment_id: null });
-                    }}
-                    onFocus={() => setShowEquipmentDropdown(true)}
-                    placeholder="Search equipment..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
-                  />
-                  {showEquipmentDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      <button
-                        type="button"
-                        onClick={() => selectEquipment(null, '')}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                      >
-                        None
-                      </button>
-                      {filteredEquipment.map((eq) => (
-                        <button
-                          type="button"
-                          key={eq.id}
-                          onClick={() => selectEquipment(eq.id, `${eq.name} (${eq.category})`)}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-blue-50"
-                        >
-                          {eq.name} ({eq.category})
-                        </button>
-                      ))}
-                      {filteredEquipment.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-gray-400">No matches</div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <EquipmentPicker />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
                   <input

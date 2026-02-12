@@ -1,10 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import _ from 'lodash';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Item } from '@/types/inventory';
-
-
 
 interface AutocompleteInputProps {
   value: string;
@@ -15,26 +12,30 @@ interface AutocompleteInputProps {
   className?: string;
 }
 
-const AutocompleteInput: React.FC<AutocompleteInputProps> = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  items, 
+const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
+  value,
+  onChange,
+  placeholder,
+  items,
   field
 }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mounted, setMounted] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Get unique values and sort them alphabetically
-  const uniqueValues = _.uniq(items.map(item => item[field]))
-    .filter((value): value is string => Boolean(value))
-    .sort((a, b) => a.localeCompare(b));
+  // Memoize unique values to avoid recomputing on every render
+  const uniqueValues = useMemo(() =>
+    [...new Set(items.map(item => item[field]))]
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => a.localeCompare(b)),
+    [items, field]
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,28 +48,29 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const inputValue = e.target.value;
-      onChange(inputValue);
-      
-      // Filter suggestions based on input and sort alphabetically
-      const filtered = uniqueValues.filter((item: string) => {
-        if (!item) return false;
-        return item.toLowerCase().includes(inputValue.toLowerCase());
-      });
-      
+    const inputValue = e.target.value;
+    onChange(inputValue);
+
+    // Debounce the filtering
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const filtered = uniqueValues.filter((item: string) =>
+        item && item.toLowerCase().includes(inputValue.toLowerCase())
+      );
       setSuggestions(filtered);
       setShowSuggestions(true);
-    } catch (error) {
-      console.error('Error in autocomplete:', error);
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
+    }, 150);
   };
 
   const handleInputFocus = () => {
-    // Show all unique values when input is focused
     setSuggestions(uniqueValues);
     setShowSuggestions(true);
   };
@@ -86,7 +88,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       onChange={handleInputChange}
       onFocus={handleInputFocus}
       placeholder={placeholder}
-      required={field !== 'unit'}  // Only require for category and location
+      required={field !== 'unit'}
     />
   );
 

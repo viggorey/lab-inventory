@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Calendar, Clock, Package, Loader, AlertCircle } from 'lucide-react';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
+
+const BookingCalendar = dynamic(() => import('@/components/BookingCalendar'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-96 flex items-center justify-center text-gray-500">
+      <Loader className="w-6 h-6 animate-spin mr-2" />
+      Loading calendar...
+    </div>
+  ),
+});
 
 interface BookingModalProps {
   item: {
@@ -22,6 +29,7 @@ interface Booking {
   end_datetime: string;
   quantity: number;
   user_email: string;
+  purpose?: string;
 }
 
 interface CalendarEvent {
@@ -32,6 +40,9 @@ interface CalendarEvent {
   extendedProps: {
     isCurrentUser: boolean;
     bookingId: string;
+    userEmail: string;
+    quantity: number;
+    purpose?: string;
   };
 }
 
@@ -68,6 +79,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
   const [loading, setLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string>('');
+  const [comment, setComment] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<{ x: number; y: number; userEmail: string; quantity: number; purpose?: string; start: string; end: string } | null>(null);
 
   const fetchExistingBookings = useCallback(async () => {
     const { data, error } = await supabase
@@ -172,14 +185,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
           quantity,
           start_datetime: startDate.toISOString(),
           end_datetime: endDate.toISOString(),
-          status: 'active'
+          status: 'active',
+          purpose: comment.trim() || null
         });
   
       if (bookingError) throw bookingError;
       
       onBookingComplete(); // This triggers parent component refresh
       onClose();
-      window.location.reload(); // Force page refresh
     } catch (error) {
       console.error('Error booking item:', error);
       setValidationMessage('Failed to book item. Please try again.');
@@ -195,7 +208,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
     backgroundColor: booking.user_email === currentUserEmail ? '#059669' : '#4338ca',
     extendedProps: {
       isCurrentUser: booking.user_email === currentUserEmail,
-      bookingId: booking.id
+      bookingId: booking.id,
+      userEmail: booking.user_email,
+      quantity: booking.quantity,
+      purpose: booking.purpose
     }
   }));
 
@@ -277,6 +293,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
             </div>
           </div>
 
+          {/* Comment */}
+          <div className="mb-6 space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Comment (optional)
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="e.g. Item will be in Room 204"
+              rows={2}
+              className="w-full px-4 py-2 border rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all resize-none"
+            />
+          </div>
+
           {/* Validation Message */}
           {validationMessage && (
             <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
@@ -288,21 +318,52 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
           {/* Calendar */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="h-96">
-              <FullCalendar
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="timeGridWeek"
-                headerToolbar={{
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                }}
+              <BookingCalendar
                 events={events}
-                height="100%"
-                slotMinTime="06:00:00"
-                slotMaxTime="22:00:00"
+                onEventClick={(info) => {
+                  const props = info.event.extendedProps;
+                  setSelectedEvent({
+                    x: 0,
+                    y: 0,
+                    userEmail: props.userEmail as string,
+                    quantity: props.quantity as number,
+                    purpose: props.purpose as string | undefined,
+                    start: info.event.startStr,
+                    end: info.event.endStr,
+                  });
+                }}
               />
             </div>
           </div>
+
+          {/* Booking Detail Popover */}
+          {selectedEvent && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setSelectedEvent(null)}>
+              <div
+                className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-72"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-semibold text-gray-900 text-sm">Booking Details</h4>
+                  <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p className="text-gray-600"><span className="font-medium text-gray-700">Booked by:</span> {selectedEvent.userEmail}</p>
+                  <p className="text-gray-600"><span className="font-medium text-gray-700">Quantity:</span> {selectedEvent.quantity}</p>
+                  <p className="text-gray-600"><span className="font-medium text-gray-700">From:</span> {new Date(selectedEvent.start).toLocaleString()}</p>
+                  <p className="text-gray-600"><span className="font-medium text-gray-700">To:</span> {new Date(selectedEvent.end).toLocaleString()}</p>
+                  {selectedEvent.purpose && (
+                    <p className="text-gray-600 mt-2 pt-2 border-t border-gray-100">
+                      <span className="font-medium text-gray-700">Comment:</span>{' '}
+                      <span className="italic">{selectedEvent.purpose}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3">

@@ -4,7 +4,8 @@
       "Bash(ls -la \"C:\\\\Users\\\\viggo\\\\code\\\\lab-inventory\\\\src\\\\components\\\\manuals\"\" 2>&1 || echo \"Directory does not exist \")",
       "Bash(npx next build:*)",
       "Bash(xxd:*)",
-      "Bash(printf:*)"
+      "Bash(printf:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS publication_categories (
 CREATE TABLE IF NOT EXISTS manuals (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
-  equipment_id UUID REFERENCES inventory(id) ON DELETE SET NULL,
   description TEXT,
   version TEXT,
   pdf_path TEXT NOT NULL,
@@ -25,6 +24,13 @@ CREATE TABLE IF NOT EXISTS manuals (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ
+);
+
+-- 2b. Manual-Equipment junction table (many-to-many)
+CREATE TABLE IF NOT EXISTS manual_equipment (
+  manual_id UUID NOT NULL REFERENCES manuals(id) ON DELETE CASCADE,
+  equipment_id UUID NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
+  UNIQUE (manual_id, equipment_id)
 );
 
 -- 3. Publications table
@@ -52,6 +58,7 @@ CREATE TABLE IF NOT EXISTS publications (
 -- Enable RLS on all new tables
 ALTER TABLE publication_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manuals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manual_equipment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE publications ENABLE ROW LEVEL SECURITY;
 
 -- Publication Categories policies
@@ -103,6 +110,33 @@ CREATE POLICY "Admins can update manuals"
 
 CREATE POLICY "Admins can delete manuals"
   ON manuals FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Manual-Equipment junction policies
+CREATE POLICY "Authenticated users can view manual_equipment"
+  ON manual_equipment FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Admins can insert manual_equipment"
+  ON manual_equipment FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can update manual_equipment"
+  ON manual_equipment FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can delete manual_equipment"
+  ON manual_equipment FOR DELETE
   TO authenticated
   USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
