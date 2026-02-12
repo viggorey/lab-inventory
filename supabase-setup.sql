@@ -51,6 +51,17 @@ CREATE TABLE IF NOT EXISTS publications (
   updated_at TIMESTAMPTZ
 );
 
+-- 4. Shared Links table
+CREATE TABLE IF NOT EXISTS shared_links (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ
+);
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
@@ -60,6 +71,7 @@ ALTER TABLE publication_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manuals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manual_equipment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE publications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shared_links ENABLE ROW LEVEL SECURITY;
 
 -- Publication Categories policies
 CREATE POLICY "Authenticated users can view categories"
@@ -164,6 +176,33 @@ CREATE POLICY "Admins can update publications"
 
 CREATE POLICY "Admins can delete publications"
   ON publications FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Shared Links policies
+CREATE POLICY "Authenticated users can view shared_links"
+  ON shared_links FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Admins can insert shared_links"
+  ON shared_links FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can update shared_links"
+  ON shared_links FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can delete shared_links"
+  ON shared_links FOR DELETE
   TO authenticated
   USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')

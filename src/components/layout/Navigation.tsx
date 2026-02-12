@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, FileText, BookOpen, LogOut } from 'lucide-react';
+import { Box, FileText, BookOpen, ExternalLink, LogOut } from 'lucide-react';
 
 interface NavigationProps {
   isAdmin: boolean;
@@ -20,6 +20,7 @@ const navLinks: NavLink[] = [
   { href: '/inventory', label: 'Inventory', icon: <Box className="w-4 h-4" /> },
   { href: '/manuals', label: 'Manuals', icon: <FileText className="w-4 h-4" /> },
   { href: '/publications', label: 'Publications', icon: <BookOpen className="w-4 h-4" /> },
+  { href: '/other', label: 'Other', icon: <ExternalLink className="w-4 h-4" /> },
 ];
 
 export default function Navigation({ isAdmin, onLogout }: NavigationProps) {
