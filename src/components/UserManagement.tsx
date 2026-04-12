@@ -36,7 +36,7 @@ const UserRow = memo(({ user, onUpdateRole }: {
       {new Date(user.created_at).toLocaleDateString()}
     </td>
     <td className="border p-2">
-      <div className="flex gap-2 justify-center">
+      <div className="flex flex-wrap gap-2 justify-center">
         {user.role === 'pending' && (
           <>
             <button
@@ -218,7 +218,7 @@ const UserManagement = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
           <button

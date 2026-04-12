@@ -445,7 +445,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
         </div>
 
         {/* Search & Filter */}
-        <div className="flex gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
@@ -459,7 +459,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
+            className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
@@ -469,10 +469,10 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
         </div>
 
         {/* Export / Import */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+            className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm w-full sm:w-auto"
           >
             <Download className="w-4 h-4" />
             Export to Excel
@@ -481,7 +481,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
             <>
               <button
                 onClick={() => document.getElementById('publications-import')?.click()}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm w-full sm:w-auto"
               >
                 <Upload className="w-4 h-4" />
                 Import from Excel
@@ -679,28 +679,29 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
             {searchTerm || filterCategory ? 'No publications match your search.' : 'No publications added yet.'}
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Title / Author</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Links</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Title / Author</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Links</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredPublications.map((pub) => (
                 <tr key={pub.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div className="font-medium text-gray-900">{pub.title}</div>
                     <div className="text-sm text-gray-500 mt-1">{pub.author}</div>
                     {pub.notes && (
                       <div className="text-xs text-gray-400 mt-1 line-clamp-1">{pub.notes}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{pub.year}</td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-sm text-gray-600">{pub.year}</td>
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-sm">
                     {pub.category ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                         {pub.category.name}
@@ -709,7 +710,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-2">
                       {pub.doi && (
                         <button
@@ -739,7 +740,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-2">
                       {pub.pdf_path && (
                         <div className="flex items-center gap-1">
@@ -779,6 +780,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

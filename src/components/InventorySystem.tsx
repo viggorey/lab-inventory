@@ -64,13 +64,13 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook, manualCount, onManua
   return (
     <>
       <tr className="hover:bg-gray-50 transition-colors">
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
+        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-sm text-gray-900">
           {item.quantity} {item.unit}
         </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-sm text-gray-900">{item.category}</td>
+        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-sm text-gray-900">{item.location}</td>
+        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-sm text-gray-900">
           <div className="flex items-center gap-2">
             {item.source}
             {item.comment && (
@@ -83,7 +83,7 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook, manualCount, onManua
             )}
           </div>
         </td>
-        <td className="px-4 py-3 whitespace-nowrap text-sm bg-gray-50">
+        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-sm bg-gray-50">
           <div className="flex items-center justify-center gap-1">
             {manualCount > 0 && (
               <button
@@ -809,15 +809,15 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
           {/* Main Content */}
           <div className="bg-white rounded-xl shadow-lg">
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">{labLabel}</h2>
 
               {/* Add New Item Form (Admin Only) */}
               {isAdmin && (
-                <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-6 rounded-lg">
+                <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-4 md:p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Item</h3>
-                  <div className="flex items-center gap-4">
-                    <div className="w-1/4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+                    <div className="w-full md:w-1/4">
                       <input
                         className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
                         placeholder="Name *"
@@ -827,9 +827,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       />
                     </div>
 
-                    <div className="flex gap-2 w-1/6">
+                    <div className="flex gap-2 w-full md:w-1/6">
                       <input
-                        className="px-4 py-2 border rounded-lg w-20 text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
+                        className="px-4 py-2 border rounded-lg w-24 text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
                         placeholder="Qty *"
                         type="number"
                         min="0"
@@ -837,7 +837,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
                         required
                       />
-                      <div className="w-24">
+                      <div className="flex-1">
                         <AutocompleteInput
                           value={newItem.unit}
                           onChange={(value) => setNewItem({...newItem, unit: value})}
@@ -848,7 +848,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       </div>
                     </div>
 
-                    <div className="w-1/6">
+                    <div className="w-full md:w-1/6">
                       <AutocompleteInput
                         value={newItem.category}
                         onChange={(value) => setNewItem({...newItem, category: value})}
@@ -858,7 +858,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       />
                     </div>
 
-                    <div className="w-1/6">
+                    <div className="w-full md:w-1/6">
                       <AutocompleteInput
                         value={newItem.location}
                         onChange={(value) => setNewItem({...newItem, location: value})}
@@ -868,7 +868,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       />
                     </div>
 
-                    <div className="flex items-center gap-2 w-1/6">
+                    <div className="flex items-center gap-2 w-full md:w-1/6">
                       <input
                         className="px-4 py-2 border rounded-lg w-full text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all"
                         placeholder="Source"
@@ -878,7 +878,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       <button
                         type="button"
                         onClick={() => setShowCommentModal(true)}
-                        className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        className={`p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0 ${
                           newItem.comment ? 'text-blue-500' : 'text-gray-500'
                         }`}
                       >
@@ -886,9 +886,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       </button>
                     </div>
 
-                    <button 
-                      type="submit" 
-                      className={`bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0 ${
+                    <button
+                      type="submit"
+                      className={`w-full md:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors ${
                         successMessage ? 'bg-green-500 hover:bg-green-600' : ''
                       }`}
                     >
@@ -899,19 +899,19 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-4 mb-6">
-                <button 
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <button
                   onClick={handleExport}
-                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
                 >
                   <Download className="w-4 h-4" />
                   Export to Excel
                 </button>
-                
+
                 {isAdmin && (
                   <>
-                    <button 
-                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    <button
+                      className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
                       onClick={() => document.getElementById('file-upload')?.click()}
                     >
                       <Upload className="w-4 h-4" />
@@ -924,8 +924,8 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       onChange={handleImport}
                       className="hidden"
                     />
-                    <button 
-                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                    <button
+                      className="flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
                       onClick={() => setShowActivityDashboard(true)}
                     >
                       <Activity className="w-4 h-4" />
@@ -984,22 +984,22 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                         Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                         Quantity
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                         Category
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                         Location
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                         Source/Comment
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100 w-[120px]">
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100 w-[120px]">
                         Actions
                       </th>
                     </tr>

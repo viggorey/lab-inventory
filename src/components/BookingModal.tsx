@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 const BookingCalendar = dynamic(() => import('@/components/BookingCalendar'), {
   ssr: false,
   loading: () => (
-    <div className="h-96 flex items-center justify-center text-gray-500">
+    <div className="h-56 sm:h-96 flex items-center justify-center text-gray-500">
       <Loader className="w-6 h-6 animate-spin mr-2" />
       Loading calendar...
     </div>
@@ -46,7 +46,6 @@ interface CalendarEvent {
   };
 }
 
-// Add this CSS at the top of the component, after the imports
 const calendarStyles = `
   .fc {
     --fc-border-color: #CBD5E1;
@@ -117,38 +116,35 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
     if (!startDate || !endDate) {
       return { valid: false, message: "Please select both start and end times" };
     }
-    
+
     if (startDate < now) {
       return { valid: false, message: "Cannot book dates in the past" };
     }
-  
+
     if (endDate <= startDate) {
       return { valid: false, message: "End time must be after start time" };
     }
-  
+
     if (requestedQuantity <= 0) {
       return { valid: false, message: "Please select a valid quantity" };
     }
-  
-    // Add check for item quantity being 0
+
     const availableInitialQuantity = parseInt(item.quantity);
     if (availableInitialQuantity === 0) {
       return { valid: false, message: "This item is currently out of stock" };
     }
-  
-    // Check overlapping bookings and available quantity
+
     const overlappingBookings = existingBookings.filter(booking => {
       const bookingStart = new Date(booking.start_datetime);
       const bookingEnd = new Date(booking.end_datetime);
       return (startDate <= bookingEnd && endDate >= bookingStart);
     });
-  
-    // Calculate total quantity booked for the overlapping period
+
     let maxBookedQuantity = 0;
     overlappingBookings.forEach(booking => {
       maxBookedQuantity = Math.max(maxBookedQuantity, booking.quantity);
     });
-  
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const availableQuantity = parseInt(item.quantity);
     const remainingQuantity = availableInitialQuantity - maxBookedQuantity;
@@ -159,23 +155,23 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
         message: `Only ${remainingQuantity} items available for this time period`
       };
     }
-  
+
     return { valid: true, message: "" };
   };
 
   const handleBook = async () => {
     const validation = validateBooking(startDate, endDate, quantity);
     setValidationMessage(validation.message);
-    
+
     if (!validation.valid || !startDate || !endDate) {
       return;
     }
-  
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
-  
+
       const { error: bookingError } = await supabase
         .from('inventory_bookings')
         .insert({
@@ -188,10 +184,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
           status: 'active',
           purpose: comment.trim() || null
         });
-  
+
       if (bookingError) throw bookingError;
-      
-      onBookingComplete(); // This triggers parent component refresh
+
+      onBookingComplete();
       onClose();
     } catch (error) {
       console.error('Error booking item:', error);
@@ -216,35 +212,38 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
   }));
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50">
       <style>{calendarStyles}</style>
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl m-4">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
+      {/* Full-screen on mobile, constrained modal on sm+ */}
+      <div className="bg-white w-full h-full sm:h-auto sm:rounded-xl sm:shadow-lg sm:max-w-4xl sm:m-4 flex flex-col">
+
+        {/* Header — sticky */}
+        <div className="flex-shrink-0 p-4 md:p-6 border-b border-gray-100">
+          <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="bg-blue-100 p-2 rounded-lg">
-                <Calendar className="w-6 h-6 text-blue-600" />
+                <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Book {item.name}</h3>
+                <h3 className="text-lg md:text-xl font-bold text-gray-900">Book {item.name}</h3>
                 <p className="text-sm text-gray-500">Available quantity: {item.quantity}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* Quantity Selection */}
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+            {/* Quantity */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Quantity
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Quantity</label>
               <div className="relative">
                 <Package className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
@@ -260,9 +259,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
 
             {/* Start Date/Time */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Start Date & Time
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Start Date & Time</label>
               <div className="relative">
                 <Clock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
@@ -277,9 +274,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
 
             {/* End Date/Time */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                End Date & Time
-              </label>
+              <label className="block text-sm font-medium text-gray-700">End Date & Time</label>
               <div className="relative">
                 <Clock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
@@ -295,9 +290,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
 
           {/* Comment */}
           <div className="mb-6 space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Comment (optional)
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Comment (optional)</label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -316,8 +309,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
           )}
 
           {/* Calendar */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="h-96">
+          <div className="bg-gray-50 rounded-lg p-3 md:p-4 mb-4">
+            <div className="h-56 sm:h-96">
               <BookingCalendar
                 events={events}
                 onEventClick={(info) => {
@@ -340,7 +333,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
           {selectedEvent && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setSelectedEvent(null)}>
               <div
-                className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-72"
+                className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-72 mx-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-between items-start mb-2">
@@ -364,30 +357,30 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
               </div>
             </div>
           )}
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleBook}
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Booking...
-                </>
-              ) : (
-                'Book Item'
-              )}
-            </button>
-          </div>
+        {/* Footer — sticky, buttons full-width on mobile */}
+        <div className="flex-shrink-0 p-4 md:p-6 border-t border-gray-100 bg-white flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleBook}
+            disabled={loading}
+            className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Booking...
+              </>
+            ) : (
+              'Book Item'
+            )}
+          </button>
         </div>
       </div>
     </div>

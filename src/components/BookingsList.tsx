@@ -22,14 +22,15 @@ const BookingItem = memo(({ booking, onCancel }: {
   booking: Booking;
   onCancel: (id: string) => void;
 }) => (
-  <div className="border rounded-lg p-4 flex justify-between items-center">
-    <div>
+  <div className="border rounded-lg p-4 flex justify-between items-start gap-3">
+    <div className="min-w-0">
       <h3 className="font-semibold">{booking.item.name}</h3>
       <p className="text-sm text-gray-600">
         Quantity: {booking.quantity}
       </p>
-      <p className="text-sm text-gray-600">
-        {new Date(booking.start_datetime).toLocaleString()} - {new Date(booking.end_datetime).toLocaleString()}
+      <p className="text-xs sm:text-sm text-gray-600 break-words">
+        {new Date(booking.start_datetime).toLocaleString()} –{' '}
+        {new Date(booking.end_datetime).toLocaleString()}
       </p>
       {booking.purpose && (
         <p className="text-sm text-gray-400 italic">{booking.purpose}</p>
@@ -37,7 +38,7 @@ const BookingItem = memo(({ booking, onCancel }: {
     </div>
     <button
       onClick={() => onCancel(booking.id)}
-      className="text-red-600 hover:text-red-800"
+      className="flex-shrink-0 text-red-600 hover:text-red-800 p-1"
     >
       <X className="w-5 h-5" />
     </button>

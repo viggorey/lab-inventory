@@ -482,10 +482,10 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
         </div>
 
         {/* Export / Import */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+            className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm w-full sm:w-auto"
           >
             <Download className="w-4 h-4" />
             Export to Excel
@@ -494,7 +494,7 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
             <>
               <button
                 onClick={() => document.getElementById('manuals-import')?.click()}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm w-full sm:w-auto"
               >
                 <Upload className="w-4 h-4" />
                 Import from Excel
@@ -591,26 +591,27 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
             {searchTerm ? 'No manuals match your search.' : 'No manuals uploaded yet.'}
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                <th className="text-left px-3 md:px-6 py-2 md:py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredManuals.map((manual) => (
                 <tr key={manual.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div className="font-medium text-gray-900">{manual.title}</div>
                     {manual.description && (
                       <div className="text-sm text-gray-500 mt-1 line-clamp-2">{manual.description}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-sm text-gray-600">
                     {manual.manual_equipment && manual.manual_equipment.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {manual.manual_equipment.map((me) => (
@@ -626,14 +627,14 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-sm text-gray-600">
                     {manual.version || '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-sm text-gray-600">
                     <div>{manual.pdf_filename}</div>
                     <div className="text-xs text-gray-400">{formatFileSize(manual.pdf_size_bytes)}</div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-3 md:py-4">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleViewPDF(manual)}
@@ -666,6 +667,7 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
