@@ -68,6 +68,26 @@ const calendarStyles = `
   .fc td, .fc th {
     border-color: #CBD5E1;
   }
+
+  /* Mobile: smaller toolbar text and buttons so nothing is cramped */
+  @media (max-width: 639px) {
+    .fc-toolbar-title {
+      font-size: 1rem !important;
+    }
+    .fc .fc-button {
+      padding: 0.25rem 0.5rem !important;
+      font-size: 0.75rem !important;
+    }
+    .fc .fc-toolbar {
+      gap: 0.25rem;
+    }
+    .fc-daygrid-day-number {
+      font-size: 0.75rem;
+    }
+    .fc-col-header-cell-cushion {
+      font-size: 0.7rem;
+    }
+  }
 `;
 
 const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingComplete }) => {
@@ -310,7 +330,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ item, onClose, onBookingCom
 
           {/* Calendar */}
           <div className="bg-gray-50 rounded-lg p-3 md:p-4 mb-4">
-            <div className="h-56 sm:h-96">
+            <div className="h-80 sm:h-96">
               <BookingCalendar
                 events={events}
                 onEventClick={(info) => {
