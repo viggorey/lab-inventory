@@ -5,10 +5,10 @@ import AuthGuard from '@/components/AuthGuard';
 
 const InventorySystem = dynamic(() => import('@/components/InventorySystem'), { ssr: false });
 
-export default function InventoryPage() {
+export default function BruneiInventoryPage() {
   return (
     <AuthGuard>
-      {() => <InventorySystem lab="main" />}
+      {() => <InventorySystem lab="brunei" />}
     </AuthGuard>
   );
 }

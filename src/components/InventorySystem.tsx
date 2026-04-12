@@ -129,7 +129,8 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook, manualCount, onManua
 
 InventoryRow.displayName = 'InventoryRow';
 
-const InventorySystem = () => {
+const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
+  const labLabel = lab === 'brunei' ? 'Brunei Inventory' : 'Lab Inventory';
   const router = useRouter();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -186,6 +187,7 @@ const InventorySystem = () => {
       const { data, error } = await supabase
         .from('inventory')
         .select('*')
+        .eq('lab', lab)
         .order('category', { ascending: true })
         .order('name', { ascending: true });
 
@@ -197,7 +199,7 @@ const InventorySystem = () => {
     } catch (error) {
       console.error('Error in fetchItems:', error);
     }
-  }, []);
+  }, [lab]);
 
   const fetchManualCounts = useCallback(async () => {
     try {
@@ -357,7 +359,8 @@ const InventorySystem = () => {
         ...newItem,
         unit: newItem.unit || null,      // Make sure unit is null if empty
         comment: newItem.comment || null, // Make sure comment is null if empty
-        created_by: user.id
+        created_by: user.id,
+        lab,
       };
   
       const { data: newItemData, error: insertError } = await supabase
@@ -633,7 +636,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) return;
   
-          const transformedData = data.filter(row => 
+          const transformedData = data.filter(row =>
             row.name && row.name.toString().trim() !== '' &&
             row.quantity !== undefined && row.quantity !== null &&
             row.category && row.category.toString().trim() !== '' &&
@@ -647,7 +650,8 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
             source: row.source ? String(row.source).trim() : null,
             comment: row.comment ? String(row.comment).trim() : null,
             created_by: user.id,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            lab,
           }));
   
           if (transformedData.length === 0) {
@@ -681,39 +685,49 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       showToast('Please type the confirmation phrase exactly as shown', 'error');
       return;
     }
-  
+
     try {
-      // First delete all logs
-      const { error: logsError } = await supabase
-        .from('inventory_logs')
-        .delete()
-        .gte('id', '00000000-0000-0000-0000-000000000000');
-  
-      if (logsError) throw logsError;
-  
-      // Then delete all bookings
-      const { error: bookingsError } = await supabase
-        .from('inventory_bookings')
-        .delete()
-        .gte('id', '00000000-0000-0000-0000-000000000000');
-  
-      if (bookingsError) throw bookingsError;
-  
-      // Finally delete all inventory items
+      // Get all item IDs for this lab
+      const { data: labItems, error: labItemsError } = await supabase
+        .from('inventory')
+        .select('id')
+        .eq('lab', lab);
+
+      if (labItemsError) throw labItemsError;
+
+      const itemIds = (labItems || []).map(i => i.id);
+
+      if (itemIds.length > 0) {
+        // Delete logs for these items
+        const { error: logsError } = await supabase
+          .from('inventory_logs')
+          .delete()
+          .in('item_id', itemIds);
+        if (logsError) throw logsError;
+
+        // Delete bookings for these items
+        const { error: bookingsError } = await supabase
+          .from('inventory_bookings')
+          .delete()
+          .in('item_id', itemIds);
+        if (bookingsError) throw bookingsError;
+      }
+
+      // Delete all inventory items for this lab
       const { error: inventoryError } = await supabase
         .from('inventory')
         .delete()
-        .gte('id', '00000000-0000-0000-0000-000000000000');
-  
+        .eq('lab', lab);
+
       if (inventoryError) throw inventoryError;
-  
+
       // Clear the form and close the modal
       setDeleteConfirmation('');
       setShowDeleteAll(false);
-      
-      // Refresh the inventory lists
+
+      // Refresh the inventory list
       await fetchItems();
-      
+
       showToast('All inventory items have been deleted', 'success');
     } catch (error) {
       console.error('Error deleting inventory:', error);
@@ -796,6 +810,8 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
           {/* Main Content */}
           <div className="bg-white rounded-xl shadow-lg">
             <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{labLabel}</h2>
+
               {/* Add New Item Form (Admin Only) */}
               {isAdmin && (
                 <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-6 rounded-lg">

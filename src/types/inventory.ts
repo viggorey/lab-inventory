@@ -7,6 +7,7 @@ export interface Item {
   location: string;
   source?: string | null;
   comment?: string | null;
+  lab?: string | null;
   created_at?: string;
   created_by?: string;
   [key: string]: string | undefined | null;
