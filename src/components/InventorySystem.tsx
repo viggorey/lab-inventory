@@ -1083,8 +1083,8 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     />
                   </div>
 
-                  <div className="flex gap-4">
-                    <div className="w-1/3">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="sm:w-1/3">
                       <label className="block text-sm font-medium text-gray-700 required-field">
                         Quantity <span className="text-red-500">*</span>
                       </label>
@@ -1099,7 +1099,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       />
                     </div>
 
-                    <div className="w-2/3">
+                    <div className="sm:w-2/3">
                       <label className="block text-sm font-medium text-gray-700">
                         Unit <span className="text-gray-400">(optional)</span>
                       </label>
@@ -1171,23 +1171,23 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 </div>
 
                 {/* Bottom buttons container */}
-                <div className="flex justify-between items-center mt-6">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       handleShowLogs(editingItem.id);
                       setShowLogsModal(true);
                     }}
-                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors flex items-center gap-2"
+                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                   >
                     <ClipboardList className="w-4 h-4" />
                     View History
                   </button>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-2 justify-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(editingItem.id)}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete
@@ -1195,13 +1195,13 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     <button
                       type="button"
                       onClick={handleCancelEdit}
-                      className="px-6 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                      className="flex-1 sm:flex-none px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors border border-gray-300 rounded-lg"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Save Changes
                     </button>
@@ -1306,9 +1306,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   <div className="divide-y">
                     {logs.map((log) => (
                       <div key={log.id} className="p-3 text-sm">
-                        <div className="flex justify-between text-gray-900 font-medium">
+                        <div className="flex flex-col sm:flex-row justify-between text-gray-900 font-medium gap-1">
                           <span>{new Date(log.timestamp).toLocaleString()}</span>
-                          <span className="text-blue-600">{log.user_email}</span>
+                          <span className="text-blue-600 break-all sm:text-right">{log.user_email}</span>
                         </div>
                         {log.action_type === 'create' ? (
                           <div className="mt-1 text-green-600 font-medium">Item created</div>

@@ -262,22 +262,22 @@ const UserActivityDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Activity className="w-8 h-8 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Activity className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
                 User Activity Dashboard
               </h1>
               <p className="text-gray-600 mt-2">Track all user edits, bookings, and activities</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full sm:w-auto">
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-gray-900 text-white border border-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 hover:bg-gray-800 transition-colors shadow"
+                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-900 text-white border border-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 hover:bg-gray-800 transition-colors shadow"
               >
                 <option value="7">Last 7 days</option>
                 <option value="30">Last 30 days</option>
@@ -337,14 +337,14 @@ const UserActivityDashboard = () => {
                   }`}
                   onClick={() => fetchUserDetails(user.email)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{user.email}</h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-gray-900 truncate">{user.email}</h3>
                       <p className="text-sm text-gray-600">
                         Last activity: {new Date(user.lastActivity).toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
                       <div className="text-center">
                         <p className="text-lg font-bold text-blue-600">{user.totalActions}</p>
                         <p className="text-xs text-gray-500">Total</p>
@@ -382,15 +382,15 @@ const UserActivityDashboard = () => {
 
         {/* User Details */}
         {selectedUser && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Activity Details for {selectedUser}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-all">Activity Details for {selectedUser}</h2>
                 <p className="text-gray-600">Detailed timeline of all activities</p>
               </div>
               <button
                 onClick={() => exportUserReport(selectedUser)}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Export Report
@@ -398,7 +398,7 @@ const UserActivityDashboard = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="flex-1">
                 <input
                   type="text"
@@ -411,7 +411,7 @@ const UserActivityDashboard = () => {
               <select
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-800 rounded-lg text-gray-900 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-blue-500"
+                className="w-full sm:w-auto px-4 py-2 border border-gray-800 rounded-lg text-gray-900 bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:border-blue-500"
               >
                 <option value="all">All Actions</option>
                 <option value="create">Creates</option>
@@ -424,9 +424,9 @@ const UserActivityDashboard = () => {
             <div className="space-y-4">
               {filteredActivities.map((activity) => (
                 <div key={activity.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm text-gray-500">
                           {new Date(activity.timestamp).toLocaleString()}
                         </span>
@@ -444,14 +444,14 @@ const UserActivityDashboard = () => {
                         {activity.item?.name ? activity.item.name : 'Unknown Item'}
                       </p>
                       {activity.action_type === 'edit' && (
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 break-words">
                           Changed <span className="font-medium">{activity.field_name}</span> from{' '}
                           <span className="text-red-600">&quot;{activity.old_value}&quot;</span> to{' '}
                           <span className="text-green-600">&quot;{activity.new_value}&quot;</span>
                         </p>
                       )}
                     </div>
-                    <div className="text-right text-sm text-gray-500">
+                    <div className="text-left sm:text-right text-sm text-gray-500 flex-shrink-0">
                       <p>{activity.item?.category}</p>
                       <p>{activity.item?.location}</p>
                     </div>
@@ -465,16 +465,16 @@ const UserActivityDashboard = () => {
                   <div className="space-y-3">
                     {userBookings.map((booking) => (
                       <div key={booking.id} className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900">{booking.item?.name || 'Unknown Item'}</p>
                             <p className="text-sm text-gray-600">
-                              {new Date(booking.start_datetime).toLocaleString()} - {new Date(booking.end_datetime).toLocaleString()}
+                              {new Date(booking.start_datetime).toLocaleString()} — {new Date(booking.end_datetime).toLocaleString()}
                             </p>
                             <p className="text-sm text-gray-600">Booked: {new Date(booking.booked_at).toLocaleString()}</p>
                             <p className="text-sm text-gray-600">Purpose: {booking.purpose || 'No purpose specified'}</p>
                           </div>
-                          <span className={`px-2 py-1 rounded text-xs ${
+                          <span className={`self-start sm:self-auto px-2 py-1 rounded text-xs flex-shrink-0 ${
                             booking.status === 'active' ? 'bg-green-100 text-green-800' :
                             booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
