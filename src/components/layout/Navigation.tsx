@@ -1,51 +1,27 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, FileText, BookOpen, ExternalLink, LogOut, ChevronDown, Menu, X } from 'lucide-react';
+import { Box, Layers, LogOut, Menu, X } from 'lucide-react';
 
 interface NavigationProps {
   isAdmin: boolean;
   onLogout: () => void;
 }
 
-interface NavLink {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-}
-
-const otherNavLinks: NavLink[] = [
-  { href: '/manuals', label: 'Manuals', icon: <FileText className="w-4 h-4" /> },
-  { href: '/publications', label: 'Publications', icon: <BookOpen className="w-4 h-4" /> },
-  { href: '/other', label: 'Other', icon: <ExternalLink className="w-4 h-4" /> },
-];
-
 export default function Navigation({ isAdmin, onLogout }: NavigationProps) {
   const pathname = usePathname();
-  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const isInventoryActive = pathname.startsWith('/inventory');
-
-  // Close inventory dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setInventoryOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Close mobile menu on route change
   useEffect(() => {
     setMenuOpen(false);
-    setInventoryOpen(false);
   }, [pathname]);
+
+  const navLinks = [
+    { href: '/inventory', label: 'Inventories', icon: <Box className="w-4 h-4" />, active: pathname.startsWith('/inventory') },
+    { href: '/other', label: 'Resources', icon: <Layers className="w-4 h-4" />, active: pathname.startsWith('/other') },
+  ];
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
@@ -62,66 +38,20 @@ export default function Navigation({ isAdmin, onLogout }: NavigationProps) {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {/* Inventory Dropdown */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setInventoryOpen(!inventoryOpen)}
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                isInventoryActive
+                link.active
                   ? 'bg-blue-100 text-blue-700 font-medium'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
-              <Box className="w-4 h-4" />
-              Inventory
-              <ChevronDown className={`w-3 h-3 transition-transform ${inventoryOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {inventoryOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
-                <Link
-                  href="/inventory"
-                  onClick={() => setInventoryOpen(false)}
-                  className={`flex items-center px-4 py-2 text-sm transition-colors ${
-                    pathname === '/inventory'
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Lab Inventory
-                </Link>
-                <Link
-                  href="/inventory/brunei"
-                  onClick={() => setInventoryOpen(false)}
-                  className={`flex items-center px-4 py-2 text-sm transition-colors ${
-                    pathname === '/inventory/brunei'
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Brunei Inventory
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {otherNavLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-blue-100 text-blue-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                {link.icon}
-                {link.label}
-              </Link>
-            );
-          })}
+              {link.icon}
+              {link.label}
+            </Link>
+          ))}
         </nav>
 
         {/* Desktop Right Side */}
@@ -160,34 +90,12 @@ export default function Navigation({ isAdmin, onLogout }: NavigationProps) {
       {/* Mobile Menu Panel */}
       {menuOpen && (
         <div className="md:hidden mt-4 pt-4 border-t border-gray-100 flex flex-col gap-1">
-          <Link
-            href="/inventory"
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              pathname === '/inventory'
-                ? 'bg-blue-100 text-blue-700 font-medium'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Box className="w-4 h-4" />
-            Lab Inventory
-          </Link>
-          <Link
-            href="/inventory/brunei"
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              pathname === '/inventory/brunei'
-                ? 'bg-blue-100 text-blue-700 font-medium'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Box className="w-4 h-4" />
-            Brunei Inventory
-          </Link>
-          {otherNavLinks.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                pathname === link.href
+                link.active
                   ? 'bg-blue-100 text-blue-700 font-medium'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}

@@ -1,0 +1,198 @@
+[
+  {
+    "id": "f9dd423d-3ca2-4287-9b0c-081b484afefb",
+    "name": "Home",
+    "lat": 4.686373,
+    "lng": 114.49374,
+    "description": "Mr. Wongs House",
+    "photo": "",
+    "flora": [
+      "Macaranga tanarius"
+    ],
+    "fauna": []
+  },
+  {
+    "id": "b7d8756d-f5cc-41ed-8c0f-9fad966f6921",
+    "name": "Chinese Restaurant",
+    "lat": 4.677377,
+    "lng": 114.497237,
+    "description": "",
+    "photo": ""
+  },
+  {
+    "id": "c946ebab-5251-4e0b-b694-c5f106ef3657",
+    "name": "Biodiversity Centre",
+    "lat": 4.642565,
+    "lng": 114.508781,
+    "description": "",
+    "photo": "",
+    "flora": [],
+    "fauna": []
+  },
+  {
+    "id": "91e2a116-2b9b-4c99-8056-755478281ae8",
+    "name": "Saw Mill",
+    "lat": 4.559278,
+    "lng": 114.489598,
+    "description": "",
+    "photo": "",
+    "flora": [
+      "Nepenthes bicalcarata",
+      "Nepenthes ampullaria"
+    ],
+    "fauna": [
+      "Colobopsis schmitzi",
+      "Dinomyrmex gigas"
+    ]
+  },
+  {
+    "id": "137e43c5-0b61-474e-ab6e-f779e270a173",
+    "name": "Badas",
+    "lat": 4.569711,
+    "lng": 114.410436,
+    "description": "",
+    "photo": "",
+    "flora": [
+      "Nepenthes bicalcarata"
+    ],
+    "fauna": [
+      "Colobopsis schmitzi"
+    ]
+  },
+  {
+    "id": "9368cf08-91ce-45f2-8b02-5fa1a2ecd653",
+    "name": "Roti Restaurant",
+    "lat": 4.650837,
+    "lng": 114.420497,
+    "description": "KKK since 1939, best rotis in Brunei",
+    "photo": "",
+    "flora": [],
+    "fauna": []
+  },
+  {
+    "id": "200a38a4-0a08-4700-8619-ba245fd467d3",
+    "name": "Waterfall trek",
+    "lat": 4.28387,
+    "lng": 114.419163,
+    "description": "",
+    "photo": "",
+    "flora": [
+      "Macaranga bancana"
+    ],
+    "fauna": []
+  },
+  {
+    "id": "42250e3f-e332-44d8-bd12-4ef03d2ebb68",
+    "name": "Gigas site",
+    "lat": 4.624131,
+    "lng": 114.511236,
+    "description": "Walk down road after concrete parking. Large Dinomyrmex gigas nest on right side of dirt road.",
+    "photo": "",
+    "flora": [
+      "Macaranga beccariana",
+      "Macaranga bancana"
+    ],
+    "fauna": [
+      "Dinomyrmex gigas"
+    ]
+  },
+  {
+    "id": "4fc326d4-2bd3-42d8-9bb6-f020dacefb9f",
+    "name": "Lamellata site 1",
+    "lat": 4.604535,
+    "lng": 114.505327,
+    "description": "Walk down into forest behind road rail",
+    "photo": "",
+    "flora": [
+      "Macaranga lamellata"
+    ],
+    "fauna": [
+      "Dinomyrmex gigas"
+    ]
+  },
+  {
+    "id": "960cf0dc-aaaf-43d7-802d-7c7ab52da750",
+    "name": "Lamellata site 2",
+    "lat": 4.608423,
+    "lng": 114.503921,
+    "description": "Walk down into forest behind road rail",
+    "photo": "",
+    "flora": [
+      "Macaranga lamellata"
+    ],
+    "fauna": [
+      "Dinomyrmex gigas"
+    ]
+  },
+  {
+    "id": "8e455fd5-06b3-4644-a27d-c91ea77a1fad",
+    "name": "Lamellata site 3",
+    "lat": 4.586386,
+    "lng": 114.507151,
+    "description": "Large red sign on right when driving up Labi road indicates trail entrance.",
+    "photo": "",
+    "flora": [
+      "Macaranga lamellata"
+    ],
+    "fauna": []
+  },
+  {
+    "id": "adef61bf-85d6-44d2-aba2-17df66122674",
+    "name": "Albomarginata site",
+    "lat": 4.582384,
+    "lng": 114.504919,
+    "description": "Walk 45 minutes along logging trail.",
+    "photo": "",
+    "flora": [
+      "Nepenthes albomarginata",
+      "Nepenthes ampullaria",
+      "Nepenthes rafflesiana"
+    ],
+    "fauna": []
+  },
+  {
+    "id": "da25bd3e-de4e-4421-95b8-ea52d0984304",
+    "name": "Pitcher plant site",
+    "lat": 4.740513,
+    "lng": 114.593641,
+    "description": "Park car along highway and walk into heath forest",
+    "photo": "",
+    "flora": [
+      "Nepenthes rafflesiana",
+      "Nepenthes gracilis",
+      "Nepenthes hemsleyana"
+    ],
+    "fauna": []
+  },
+  {
+    "id": "7ed69a24-437b-458a-8ff3-597e17b24b01",
+    "name": "Logging trail 1",
+    "lat": 4.553714,
+    "lng": 114.517472,
+    "description": "",
+    "photo": "",
+    "flora": [
+      "Macaranga beccariana",
+      "Macaranga rufescens",
+      "Macaranga bancana"
+    ],
+    "fauna": [
+      "Leptogenys sp"
+    ]
+  },
+  {
+    "id": "6606f5e6-f15f-4028-87c2-3d664f4e76c0",
+    "name": "Logging trail 2",
+    "lat": 4.551456,
+    "lng": 114.525808,
+    "description": "",
+    "photo": "",
+    "flora": [
+      "Macaranga beccariana",
+      "Macaranga bancana"
+    ],
+    "fauna": [
+      "Leptogenys sp"
+    ]
+  }
+]
