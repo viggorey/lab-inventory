@@ -389,7 +389,7 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
   return (
     <div className="flex flex-col md:flex-row border border-gray-200 rounded-xl overflow-hidden" style={{ height: '75vh', minHeight: '500px' }}>
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <div className="w-full md:w-[300px] md:flex-shrink-0 h-[260px] md:h-full flex flex-col border-b md:border-b-0 md:border-r border-gray-200 bg-white overflow-hidden">
+      <div className="w-full md:w-[300px] md:flex-shrink-0 h-[260px] md:h-full flex flex-col border-b md:border-b-0 md:border-r border-gray-200 bg-white text-gray-900 overflow-hidden">
         {/* Search by name */}
         <div className="p-3 border-b border-gray-100">
           <input
@@ -397,7 +397,7 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
             placeholder="Search sites…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-1.5 text-sm text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -414,7 +414,7 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
                 if (e.key === 'Escape') clearSpecies();
               }}
               onBlur={() => setTimeout(() => setShowSpeciesSugg(false), 150)}
-              className="flex-1 px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="flex-1 px-3 py-1.5 text-sm text-gray-900 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ borderColor: '#27ae60' }}
             />
             {activeSpecies && (
@@ -434,7 +434,7 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
                 <li
                   key={s}
                   onMouseDown={(e) => { e.preventDefault(); applySpecies(s); }}
-                  className="px-3 py-1.5 text-sm hover:bg-green-50 cursor-pointer"
+                  className="px-3 py-1.5 text-sm text-gray-900 hover:bg-green-50 cursor-pointer"
                 >
                   {s}
                 </li>
