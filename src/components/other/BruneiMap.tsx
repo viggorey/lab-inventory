@@ -4,8 +4,9 @@ import 'leaflet/dist/leaflet.css';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import { Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import type { Site, SiteFormData } from '@/types/site';
+import type { Site, SiteFormData, SiteLog } from '@/types/site';
 import TagInput from './TagInput';
 
 if (typeof window !== 'undefined') {
@@ -74,6 +75,43 @@ function SpeciesFilterController({
   return null;
 }
 
+// ── History helpers ───────────────────────────────────────────────────────────
+function formatLogEntry(log: SiteLog): string {
+  if (log.action_type === 'create') return 'Created this site';
+  switch (log.field_name) {
+    case 'name': return `Name: "${log.old_value}" → "${log.new_value}"`;
+    case 'description':
+      if (!log.old_value && log.new_value) return 'Description added';
+      if (log.old_value && !log.new_value) return 'Description removed';
+      return 'Description updated';
+    case 'flora':
+    case 'fauna': {
+      const label = log.field_name === 'flora' ? 'Flora' : 'Fauna';
+      const oldSet = new Set(log.old_value?.split(', ').filter(Boolean) ?? []);
+      const newSet = new Set(log.new_value?.split(', ').filter(Boolean) ?? []);
+      const added = [...newSet].filter((s) => !oldSet.has(s));
+      const removed = [...oldSet].filter((s) => !newSet.has(s));
+      const parts: string[] = [];
+      if (added.length) parts.push(`added: ${added.join(', ')}`);
+      if (removed.length) parts.push(`removed: ${removed.join(', ')}`);
+      return `${label} — ${parts.join('; ')}`;
+    }
+    case 'location': return 'Location updated';
+    case 'photo':
+      if (!log.old_value) return 'Photo added';
+      if (!log.new_value) return 'Photo removed';
+      return 'Photo updated';
+    default: return `${log.field_name ?? 'Field'} updated`;
+  }
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 // ── Inner: single marker with opacity control ─────────────────────────────────
 function SiteMarker({
   site,
@@ -81,6 +119,7 @@ function SiteMarker({
   onEdit,
   onDelete,
   onOpen,
+  onHistory,
   isAdmin,
 }: {
   site: Site;
@@ -88,6 +127,7 @@ function SiteMarker({
   onEdit: (site: Site) => void;
   onDelete: (site: Site) => void;
   onOpen: (site: Site) => void;
+  onHistory: (site: Site) => void;
   isAdmin: boolean;
 }) {
   const markerRef = useRef<L.Marker>(null);
@@ -132,24 +172,32 @@ function SiteMarker({
           {site.photoUrl && (
             <img src={site.photoUrl} alt={site.name} className="w-full rounded mb-2" style={{ maxHeight: '160px', objectFit: 'cover' }} />
           )}
-          {isAdmin && (
-            <div className="flex gap-2 mt-1">
-              <button
-                onClick={() => onEdit(site)}
-                className="flex-1 text-xs py-1 px-2 rounded text-white"
-                style={{ background: '#1a5276' }}
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => onDelete(site)}
-                className="flex-1 text-xs py-1 px-2 rounded text-white"
-                style={{ background: '#e74c3c' }}
-              >
-                Delete
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2 mt-1">
+            <button
+              onClick={() => onHistory(site)}
+              className="flex-1 text-xs py-1 px-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+            >
+              History
+            </button>
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => onEdit(site)}
+                  className="flex-1 text-xs py-1 px-2 rounded text-white"
+                  style={{ background: '#1a5276' }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => onDelete(site)}
+                  className="flex-1 text-xs py-1 px-2 rounded text-white"
+                  style={{ background: '#e74c3c' }}
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </Popup>
     </Marker>
@@ -181,6 +229,11 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
   const [saving, setSaving] = useState(false);
 
   const mapRef = useRef<L.Map | null>(null);
+
+  // ── History modal ──────────────────────────────────────────────────────────
+  const [historyModal, setHistoryModal] = useState<{ open: boolean; site: Site | null }>({ open: false, site: null });
+  const [historyLogs, setHistoryLogs] = useState<SiteLog[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const allFlora = useMemo(() => {
@@ -238,6 +291,18 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
   }, []);
 
   useEffect(() => { fetchSites(); }, [fetchSites]);
+
+  const openHistoryModal = useCallback(async (site: Site) => {
+    setHistoryModal({ open: true, site });
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from('site_logs')
+      .select('*')
+      .eq('site_id', site.id)
+      .order('timestamp', { ascending: false });
+    if (!error && data) setHistoryLogs(data as SiteLog[]);
+    setHistoryLoading(false);
+  }, []);
 
   // ── Signed URL on demand ───────────────────────────────────────────────────
   async function resolvePhotoUrl(site: Site): Promise<Site> {
@@ -334,15 +399,49 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
         photo: photoPath,
       };
 
+      const userEmail = user?.email ?? 'unknown';
       if (modal.mode === 'add') {
         payload.created_by = user?.id;
         const { data, error } = await supabase.from('sites').insert(payload).select().single();
         if (error) throw error;
         setSites((prev) => [...prev, data as Site]);
+        await supabase.from('site_logs').insert({
+          site_id: (data as Site).id,
+          user_id: user?.id ?? null,
+          user_email: userEmail,
+          action_type: 'create',
+        });
       } else {
-        const { data, error } = await supabase.from('sites').update(payload).eq('id', modal.site!.id).select().single();
+        const old = modal.site!;
+        const { data, error } = await supabase.from('sites').update(payload).eq('id', old.id).select().single();
         if (error) throw error;
         setSites((prev) => prev.map((s) => (s.id === (data as Site).id ? (data as Site) : s)));
+        const logEntries: { field_name: string; old_value: string | null; new_value: string | null }[] = [];
+        if (old.name !== formName.trim())
+          logEntries.push({ field_name: 'name', old_value: old.name, new_value: formName.trim() });
+        const oldDesc = old.description ?? '';
+        const newDesc = formDesc.trim();
+        if (oldDesc !== newDesc)
+          logEntries.push({ field_name: 'description', old_value: old.description, new_value: newDesc || null });
+        const oldFlora = [...(old.flora ?? [])].sort().join(', ');
+        const newFlora = [...formFlora].sort().join(', ');
+        if (oldFlora !== newFlora)
+          logEntries.push({ field_name: 'flora', old_value: oldFlora || null, new_value: newFlora || null });
+        const oldFauna = [...(old.fauna ?? [])].sort().join(', ');
+        const newFauna = [...formFauna].sort().join(', ');
+        if (oldFauna !== newFauna)
+          logEntries.push({ field_name: 'fauna', old_value: oldFauna || null, new_value: newFauna || null });
+        if (String(old.lat) !== formLat || String(old.lng) !== formLng)
+          logEntries.push({ field_name: 'location', old_value: `${old.lat}, ${old.lng}`, new_value: `${lat}, ${lng}` });
+        if (removePhoto && old.photo)
+          logEntries.push({ field_name: 'photo', old_value: 'photo', new_value: null });
+        else if (formPhotoFile)
+          logEntries.push({ field_name: 'photo', old_value: old.photo ? 'photo' : null, new_value: 'photo' });
+        if (logEntries.length > 0) {
+          await supabase.from('site_logs').insert(
+            logEntries.map((l) => ({ site_id: old.id, user_id: user?.id ?? null, user_email: userEmail, action_type: 'edit' as const, ...l }))
+          );
+        }
       }
       closeModal();
     } catch (err) {
@@ -463,33 +562,41 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
             </p>
           ) : (
             filteredSites.map((site) => (
-              <button
-                key={site.id}
-                onClick={() => {
-                  handleSiteOpen(site);
-                  mapRef.current?.setView([site.lat, site.lng], Math.max(mapRef.current.getZoom(), 14));
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 hover:bg-gray-50 text-left transition-colors"
-              >
-                {site.photoUrl ? (
-                  <img src={site.photoUrl} alt={site.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded flex-shrink-0 text-lg">📍</div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{site.name}</p>
-                  {(site.flora?.length ?? 0) > 0 && (
-                    <p className="text-xs text-gray-500 truncate">
-                      <span style={{ color: '#27ae60' }}>Flora:</span> {site.flora.join(', ')}
-                    </p>
+              <div key={site.id} className="flex items-center border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={() => {
+                    handleSiteOpen(site);
+                    mapRef.current?.setView([site.lat, site.lng], Math.max(mapRef.current.getZoom(), 14));
+                  }}
+                  className="flex-1 flex items-center gap-2 px-3 py-2 text-left min-w-0"
+                >
+                  {site.photoUrl ? (
+                    <img src={site.photoUrl} alt={site.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded flex-shrink-0 text-lg">📍</div>
                   )}
-                  {(site.fauna?.length ?? 0) > 0 && (
-                    <p className="text-xs text-gray-500 truncate">
-                      <span style={{ color: '#27ae60' }}>Fauna:</span> {site.fauna.join(', ')}
-                    </p>
-                  )}
-                </div>
-              </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{site.name}</p>
+                    {(site.flora?.length ?? 0) > 0 && (
+                      <p className="text-xs text-gray-500 truncate">
+                        <span style={{ color: '#27ae60' }}>Flora:</span> {site.flora.join(', ')}
+                      </p>
+                    )}
+                    {(site.fauna?.length ?? 0) > 0 && (
+                      <p className="text-xs text-gray-500 truncate">
+                        <span style={{ color: '#27ae60' }}>Fauna:</span> {site.fauna.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </button>
+                <button
+                  onClick={() => openHistoryModal(site)}
+                  className="flex-shrink-0 px-2 py-2 text-gray-300 hover:text-blue-500 transition-colors"
+                  title="View history"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ))
           )}
         </div>
@@ -532,6 +639,7 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
               onEdit={openEditModal}
               onDelete={handleDelete}
               onOpen={handleSiteOpen}
+              onHistory={openHistoryModal}
               isAdmin={isAdmin}
             />
           ))}
@@ -646,6 +754,48 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ── History Modal ───────────────────────────────────────────────────── */}
+      {historyModal.open && historyModal.site && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setHistoryModal({ open: false, site: null }); }}
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900">History: {historyModal.site.name}</h3>
+              </div>
+              <button onClick={() => setHistoryModal({ open: false, site: null })} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {historyLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                </div>
+              ) : historyLogs.length === 0 ? (
+                <p className="text-center text-gray-400 py-8 text-sm">No history recorded yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {historyLogs.map((log) => (
+                    <div key={log.id} className="flex gap-3 text-sm">
+                      <div className="flex-shrink-0 mt-1.5 w-2 h-2 rounded-full bg-blue-400" />
+                      <div>
+                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-400 mb-0.5">
+                          <span>{formatDate(log.timestamp)}</span>
+                          <span>·</span>
+                          <span className="font-medium text-gray-600">{log.user_email}</span>
+                        </div>
+                        <p className="text-gray-800">{formatLogEntry(log)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

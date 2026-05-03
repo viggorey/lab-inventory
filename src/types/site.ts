@@ -20,3 +20,15 @@ export interface SiteFormData {
   flora: string[];
   fauna: string[];
 }
+
+export interface SiteLog {
+  id: string;
+  site_id: string;
+  user_id: string | null;
+  user_email: string;
+  action_type: 'create' | 'edit';
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  timestamp: string;
+}
