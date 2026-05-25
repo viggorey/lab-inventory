@@ -10,5 +10,8 @@ export interface Item {
   lab?: string | null;
   created_at?: string;
   created_by?: string;
-  [key: string]: string | undefined | null;
+  broken?: boolean | null;
+  broken_at?: string | null;
+  broken_by_email?: string | null;
+  [key: string]: string | boolean | undefined | null;
 }

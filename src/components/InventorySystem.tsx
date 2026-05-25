@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, memo} from 'react';
-import { Download, Upload, Search, MessageSquare, ClipboardList, Trash2, FileText } from 'lucide-react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { Download, Upload, Search, MessageSquare, ClipboardList, Trash2, FileText, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
@@ -85,6 +85,14 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook, manualCount, onManua
         </td>
         <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-sm bg-gray-50">
           <div className="flex items-center justify-center gap-1">
+            {item.broken && (
+              <span
+                title={`Marked as broken${item.broken_by_email ? ` by ${item.broken_by_email}` : ''}${item.broken_at ? ` on ${new Date(item.broken_at).toLocaleDateString()}` : ''}`}
+                className="text-red-500 flex items-center"
+              >
+                <Wrench className="w-4 h-4" />
+              </span>
+            )}
             {manualCount > 0 && (
               <button
                 onClick={onManualClick}
@@ -510,6 +518,17 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
   
       if (originalError) throw originalError;
   
+      // Compute broken fields: preserve reporter when item stays broken
+      const wasAlreadyBroken = originalItem.broken === true;
+      const isNowBroken = editingItem.broken === true;
+      const brokenFields = isNowBroken
+        ? {
+            broken: true,
+            broken_by_email: wasAlreadyBroken ? originalItem.broken_by_email : user.email,
+            broken_at: wasAlreadyBroken ? originalItem.broken_at : new Date().toISOString(),
+          }
+        : { broken: false, broken_by_email: null, broken_at: null };
+
       // Update the item
       const { error: updateError } = await supabase
         .from('inventory')
@@ -521,6 +540,7 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
           location: editingItem.location,
           source: editingItem.source,
           comment: editingItem.comment || null,
+          ...brokenFields,
           updated_at: new Date().toISOString(),
           updated_by: user.id
         })
@@ -531,7 +551,7 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
       // Log the changes
       if (originalItem) {
         const changes = [];
-        const fields: (keyof Item)[] = ['name', 'quantity', 'unit', 'category', 'location', 'source', 'comment'];
+        const fields: (keyof Item)[] = ['name', 'quantity', 'unit', 'category', 'location', 'source', 'comment', 'broken'];
         
         for (const field of fields) {
           if (originalItem[field]?.toString() !== editingItem[field]?.toString()) {
@@ -735,26 +755,36 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     }
   };
 
-  // Filter items based on search terms
-  const filteredItems = allItems.filter(item => {
-    return Object.keys(searchTerms).every(key => {
-      const searchTerm = searchTerms[key as keyof typeof searchTerms];
-      if (!searchTerm) return true;
-  
-      if (key === 'quantity') {
-        const fullQuantity = `${item.quantity} ${item.unit || ''}`.toLowerCase();
-        return fullQuantity.includes(searchTerm.toLowerCase());
-      }
-  
-      if (key === 'source') {
-        const sourceAndComment = `${item.source} ${item.comment || ''}`.toLowerCase();
-        return sourceAndComment.includes(searchTerm.toLowerCase());
-      }
-  
-      const itemValue = item[key as keyof Item];
-      return itemValue?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
-    });
-  });
+  // Reset to page 1 whenever search terms change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerms]);
+
+  // Pre-compute active search keys and lowercased terms once per search change
+  const activeSearches = useMemo(() =>
+    Object.entries(searchTerms)
+      .filter(([, term]) => term !== '')
+      .map(([key, term]) => ({ key, term: term.toLowerCase() })),
+    [searchTerms]
+  );
+
+  const hasActiveSearch = activeSearches.length > 0;
+
+  // Filter items — only recalculates when allItems or searchTerms change
+  const filteredItems = useMemo(() => {
+    if (!hasActiveSearch) return allItems;
+    return allItems.filter(item =>
+      activeSearches.every(({ key, term }) => {
+        if (key === 'quantity') {
+          return `${item.quantity} ${item.unit || ''}`.toLowerCase().includes(term);
+        }
+        if (key === 'source') {
+          return `${item.source} ${item.comment || ''}`.toLowerCase().includes(term);
+        }
+        return item[key as keyof Item]?.toString().toLowerCase().includes(term) ?? false;
+      })
+    );
+  }, [allItems, activeSearches, hasActiveSearch]);
 
   const handleShowLogs = async (itemId: string) => {
     setLogsLoading(true);
@@ -937,7 +967,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
               {/* Search and Filters */}
               <div className="mb-6">
-                {Object.values(searchTerms).some(term => term !== '') && (
+                {hasActiveSearch && (
                   <div className="flex justify-end mb-2">
                     <button
                       onClick={() => {
@@ -1005,9 +1035,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {(Object.values(searchTerms).some(term => term !== '')
-                      ? filteredItems
-                      : allItems).slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((item) => (
+                    {(hasActiveSearch ? filteredItems : allItems).slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((item) => (
                       <InventoryRow
                         key={item.id}
                         item={item}
@@ -1028,9 +1056,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={Math.ceil(
-                    (Object.values(searchTerms).some(term => term !== '')
-                      ? filteredItems.length
-                      : allItems.length)
+                    (hasActiveSearch ? filteredItems.length : allItems.length)
                     / ITEMS_PER_PAGE
                   )}
                   onPageChange={setCurrentPage}
@@ -1168,6 +1194,26 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       <MessageSquare className="w-5 h-5" />
                     </button>
                   </div>
+                </div>
+
+                {/* Broken status */}
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+                  <input
+                    type="checkbox"
+                    id="broken-checkbox"
+                    checked={!!editingItem.broken}
+                    onChange={(e) => setEditingItem(prev => prev ? { ...prev, broken: e.target.checked } : null)}
+                    className="w-4 h-4 accent-red-600 cursor-pointer"
+                  />
+                  <label htmlFor="broken-checkbox" className="flex items-center gap-1.5 text-sm font-medium text-red-600 cursor-pointer select-none">
+                    <Wrench className="w-4 h-4" />
+                    Mark as broken
+                  </label>
+                  {editingItem.broken && editingItem.broken_by_email && (
+                    <span className="text-xs text-gray-400 ml-auto">
+                      Reported by {editingItem.broken_by_email}{editingItem.broken_at ? ` · ${new Date(editingItem.broken_at).toLocaleDateString()}` : ''}
+                    </span>
+                  )}
                 </div>
 
                 {/* Bottom buttons container */}

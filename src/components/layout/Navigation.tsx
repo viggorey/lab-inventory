@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, Layers, LogOut, Menu, X } from 'lucide-react';
+import { Box, Layers, LogOut, Menu, Wrench, X } from 'lucide-react';
 
 interface NavigationProps {
   isAdmin: boolean;
@@ -19,7 +19,8 @@ export default function Navigation({ isAdmin, onLogout }: NavigationProps) {
   }, [pathname]);
 
   const navLinks = [
-    { href: '/inventory', label: 'Inventories', icon: <Box className="w-4 h-4" />, active: pathname.startsWith('/inventory') },
+    { href: '/inventory', label: 'Inventories', icon: <Box className="w-4 h-4" />, active: pathname.startsWith('/inventory') && !pathname.startsWith('/inventory/broken') },
+    { href: '/inventory/broken', label: 'Broken Items', icon: <Wrench className="w-4 h-4" />, active: pathname.startsWith('/inventory/broken') },
     { href: '/other', label: 'Resources', icon: <Layers className="w-4 h-4" />, active: pathname.startsWith('/other') },
   ];
 
