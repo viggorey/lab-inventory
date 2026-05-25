@@ -938,6 +938,24 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   Export to Excel
                 </button>
 
+                {(() => {
+                  const brokenCount = allItems.filter(i => i.broken).length;
+                  return (
+                    <button
+                      onClick={() => router.push(`/inventory/broken?lab=${lab}`)}
+                      className="flex items-center justify-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors w-full sm:w-auto"
+                    >
+                      <Wrench className="w-4 h-4" />
+                      Broken Items
+                      {brokenCount > 0 && (
+                        <span className="bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                          {brokenCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
+
                 {isAdmin && (
                   <>
                     <button
