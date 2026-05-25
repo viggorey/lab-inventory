@@ -87,7 +87,7 @@ const InventoryRow = memo(({ item, isAdmin, onEdit, onBook, manualCount, onManua
           <div className="flex items-center justify-center gap-1">
             {item.broken && (
               <span
-                title={`Marked as broken${item.broken_by_email ? ` by ${item.broken_by_email}` : ''}${item.broken_at ? ` on ${new Date(item.broken_at).toLocaleDateString()}` : ''}`}
+                title={`Marked as broken${item.broken_by_email ? ` by ${item.broken_by_email}` : ''}${item.broken_at ? ` on ${new Date(item.broken_at).toLocaleDateString()}` : ''}${item.broken_comment ? `\n${item.broken_comment}` : ''}`}
                 className="text-red-500 flex items-center"
               >
                 <Wrench className="w-4 h-4" />
@@ -526,8 +526,9 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
             broken: true,
             broken_by_email: wasAlreadyBroken ? originalItem.broken_by_email : user.email,
             broken_at: wasAlreadyBroken ? originalItem.broken_at : new Date().toISOString(),
+            broken_comment: editingItem.broken_comment || null,
           }
-        : { broken: false, broken_by_email: null, broken_at: null };
+        : { broken: false, broken_by_email: null, broken_at: null, broken_comment: null };
 
       // Update the item
       const { error: updateError } = await supabase
@@ -551,7 +552,7 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
       // Log the changes
       if (originalItem) {
         const changes = [];
-        const fields: (keyof Item)[] = ['name', 'quantity', 'unit', 'category', 'location', 'source', 'comment', 'broken'];
+        const fields: (keyof Item)[] = ['name', 'quantity', 'unit', 'category', 'location', 'source', 'comment', 'broken', 'broken_comment'];
         
         for (const field of fields) {
           if (originalItem[field]?.toString() !== editingItem[field]?.toString()) {
@@ -1229,6 +1230,16 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     </span>
                   )}
                 </div>
+
+                {editingItem.broken && (
+                  <textarea
+                    className="w-full mt-2 px-3 py-2 border border-red-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all resize-none"
+                    rows={2}
+                    placeholder="Describe what is broken (optional)…"
+                    value={editingItem.broken_comment || ''}
+                    onChange={(e) => setEditingItem(prev => prev ? { ...prev, broken_comment: e.target.value || null } : null)}
+                  />
+                )}
 
                 {/* Bottom buttons container */}
                 <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 gap-3">

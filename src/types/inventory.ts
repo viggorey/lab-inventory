@@ -13,5 +13,6 @@ export interface Item {
   broken?: boolean | null;
   broken_at?: string | null;
   broken_by_email?: string | null;
+  broken_comment?: string | null;
   [key: string]: string | boolean | undefined | null;
 }

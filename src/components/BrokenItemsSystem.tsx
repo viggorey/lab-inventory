@@ -110,6 +110,7 @@ export default function BrokenItemsSystem({ lab }: Props) {
                 {!lab && (
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lab</th>
                 )}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comment</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported by</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported on</th>
                 {isAdmin && (
@@ -131,6 +132,7 @@ export default function BrokenItemsSystem({ lab }: Props) {
                   {!lab && (
                     <td className="px-4 py-3 text-gray-700">{LAB_LABEL[item.lab ?? 'main'] ?? item.lab}</td>
                   )}
+                  <td className="px-4 py-3 text-gray-500 italic">{item.broken_comment || '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{item.broken_by_email ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-500">
                     {item.broken_at
