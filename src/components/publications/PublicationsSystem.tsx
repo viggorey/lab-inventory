@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { uploadPDF, deletePDF, getPDFUrl, formatFileSize } from '@/lib/storage';
+import { uploadDocument, deleteDocument, getFileUrl, formatFileSize } from '@/lib/storage';
 import { BookOpen, Plus, Search, Trash2, Edit3, X, Upload, ExternalLink, Eye, Tag, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { PublicationWithCategory, PublicationFormData, PublicationCategory } from '@/types/publication';
@@ -102,7 +102,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
       let pdfData: { pdf_path: string; pdf_filename: string; pdf_size_bytes: number } | null = null;
 
       if (pdfFile) {
-        const uploadResult = await uploadPDF(pdfFile, 'publications', user.id);
+        const uploadResult = await uploadDocument(pdfFile, 'publications', user.id, ['pdf']);
         pdfData = {
           pdf_path: uploadResult.path,
           pdf_filename: uploadResult.filename,
@@ -176,9 +176,9 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
       // If a new PDF was uploaded, replace the old one
       if (pdfFile) {
         if (editingPublication.pdf_path) {
-          await deletePDF(editingPublication.pdf_path, 'publications');
+          await deleteDocument(editingPublication.pdf_path, 'publications');
         }
-        const uploadResult = await uploadPDF(pdfFile, 'publications', user.id);
+        const uploadResult = await uploadDocument(pdfFile, 'publications', user.id, ['pdf']);
         updateData.pdf_path = uploadResult.path;
         updateData.pdf_filename = uploadResult.filename;
         updateData.pdf_size_bytes = uploadResult.size;
@@ -210,7 +210,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
     try {
       // Delete PDF from storage if it exists
       if (pub.pdf_path) {
-        await deletePDF(pub.pdf_path, 'publications');
+        await deleteDocument(pub.pdf_path, 'publications');
       }
 
       const { error } = await supabase
@@ -231,7 +231,7 @@ export default function PublicationsSystem({ isAdmin }: PublicationsSystemProps)
   const handleViewPDF = async (pub: PublicationWithCategory) => {
     if (!pub.pdf_path) return;
     try {
-      const url = await getPDFUrl(pub.pdf_path, 'publications');
+      const url = await getFileUrl(pub.pdf_path, 'publications');
       window.open(url, '_blank');
     } catch (error) {
       console.error('Error getting PDF URL:', error);
