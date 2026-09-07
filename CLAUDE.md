@@ -54,7 +54,25 @@ src/
 
 ## Database schema (Supabase / Postgres)
 
-RLS is enabled on **all** tables. SELECT is open to any authenticated user; INSERT/UPDATE/DELETE require `role = 'admin'` in `profiles`.
+RLS is enabled on **all** tables.
+
+- **SELECT** requires an *approved* role — `admin` or `user` — via `public.is_approved()`.
+  Being merely authenticated is not enough: registration is open, so a signed-in
+  account may still be `pending` or `denied`.
+- **INSERT/UPDATE/DELETE** require `admin` via `public.is_admin()`, except
+  `inventory_bookings`, which any approved user may manage.
+- `profiles` is the exception: every user may read *their own* row regardless of
+  role (the app needs it to discover that role), admins may read all, and only
+  admins may update. Sign-up may insert one row, for yourself, as `pending`.
+
+`is_admin()` and `is_approved()` are `SECURITY DEFINER` — a policy on `profiles`
+that queries `profiles` would recurse infinitely.
+
+**The full schema lives in `supabase/migrations/0000_baseline.sql`** — tables,
+constraints, indexes, functions, every policy and all three buckets. It is the
+only copy outside the Supabase dashboard (the project is on the free plan, which
+has no automated backups), so re-capture it after any schema change. See
+`migrations/README.md`.
 
 ### `profiles`
 | Column | Type | Notes |
@@ -169,8 +187,9 @@ Unique on `(manual_id, equipment_id)`. One manual can be linked to many items an
 ### Storage buckets
 | Bucket | Access | Used for |
 |---|---|---|
-| `equipment-manuals` | Private (signed URLs) | Manual PDFs |
+| `equipment-manuals` | Private (signed URLs) | The master manuals ZIP archive, and any individual manual PDFs |
 | `publications` | Private (signed URLs) | Publication PDFs |
+| `site-photos` | Private (signed URLs) | Brunei field-site photos, written via `/api/site-photos` |
 
 PDF paths follow the pattern: `{user_id}/{timestamp}_{sanitized_filename}`
 
