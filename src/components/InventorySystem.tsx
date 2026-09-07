@@ -32,6 +32,12 @@ interface InventoryLog {
   timestamp: Date;
 }
 
+interface ManualOption {
+  id: string;
+  title: string;
+  pdf_filename: string;
+}
+
 interface SimilarityWarning {
   similarItems: string[];
   similarCategories: string[];
@@ -144,7 +150,9 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
   const { confirm } = useConfirm();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [manualCounts, setManualCounts] = useState<Record<string, number>>({});
+  const [manualLinks, setManualLinks] = useState<Record<string, string[]>>({});
+  const [manuals, setManuals] = useState<ManualOption[]>([]);
+  const [editingManualIds, setEditingManualIds] = useState<string[]>([]);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
@@ -209,21 +217,27 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
     }
   }, [lab]);
 
-  const fetchManualCounts = useCallback(async () => {
+  // Which manuals each item is linked to. Keyed by equipment_id so a row can
+  // show its count and link straight to the manual when there is only one.
+  const fetchManualLinks = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('manual_equipment')
-        .select('equipment_id');
+      const [{ data: links, error: linksError }, { data: manualRows, error: manualsError }] =
+        await Promise.all([
+          supabase.from('manual_equipment').select('equipment_id, manual_id'),
+          supabase.from('manuals').select('id, title, pdf_filename').order('title'),
+        ]);
 
-      if (error) throw error;
+      if (linksError) throw linksError;
+      if (manualsError) throw manualsError;
 
-      const counts: Record<string, number> = {};
-      for (const row of data || []) {
-        counts[row.equipment_id] = (counts[row.equipment_id] || 0) + 1;
+      const byItem: Record<string, string[]> = {};
+      for (const row of links || []) {
+        (byItem[row.equipment_id] ||= []).push(row.manual_id);
       }
-      setManualCounts(counts);
+      setManualLinks(byItem);
+      setManuals((manualRows as ManualOption[]) || []);
     } catch (error) {
-      console.error('Error fetching manual counts:', error);
+      console.error('Error fetching manual links:', error);
     }
   }, []);
 
@@ -258,7 +272,7 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
         // Fetch data
         await Promise.all([
           fetchItems(),
-          fetchManualCounts()
+          fetchManualLinks()
         ]);
       } catch (error) {
         console.error('Error in checkUserRole:', error);
@@ -269,7 +283,7 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
     };
 
     checkUserRole();
-  }, [fetchItems, fetchManualCounts]);
+  }, [fetchItems, fetchManualLinks]);
 
   // Calculate similarity of item name added (60% warning)
   function levenshteinDistance(str1: string, str2: string): number {
@@ -498,7 +512,14 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
   // Add edit functions
   const handleEdit = (item: Item) => {
     setEditingItem(item);
+    setEditingManualIds(manualLinks[item.id] || []);
     setIsEditing(true);
+  };
+
+  const toggleManualLink = (manualId: string) => {
+    setEditingManualIds((prev) =>
+      prev.includes(manualId) ? prev.filter((id) => id !== manualId) : [...prev, manualId]
+    );
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -548,6 +569,27 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
         .eq('id', editingItem.id);
   
       if (updateError) throw updateError;
+
+      // Sync manual links: only touch rows that actually changed
+      const previousManualIds = manualLinks[editingItem.id] || [];
+      const added = editingManualIds.filter((id) => !previousManualIds.includes(id));
+      const removed = previousManualIds.filter((id) => !editingManualIds.includes(id));
+
+      if (removed.length > 0) {
+        const { error: unlinkError } = await supabase
+          .from('manual_equipment')
+          .delete()
+          .eq('equipment_id', editingItem.id)
+          .in('manual_id', removed);
+        if (unlinkError) throw unlinkError;
+      }
+
+      if (added.length > 0) {
+        const { error: linkError } = await supabase
+          .from('manual_equipment')
+          .insert(added.map((manualId) => ({ manual_id: manualId, equipment_id: editingItem.id })));
+        if (linkError) throw linkError;
+      }
   
       // Log the changes
       if (originalItem) {
@@ -585,7 +627,7 @@ const InventorySystem = ({ lab = 'main' }: { lab?: 'main' | 'brunei' }) => {
       setIsEditing(false);
       setEditingItem(null);
       setShowCommentModal(false);
-      await fetchItems();
+      await Promise.all([fetchItems(), fetchManualLinks()]);
       
       setSuccessMessage('Item updated successfully');
       setTimeout(() => setSuccessMessage(''), 2000); // Clear after 2 seconds
@@ -628,7 +670,7 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = files[0];
 
     if (file.size > MAX_FILE_SIZE) {
-      showToast('File is too large. Maximum size is 5MB.', 'error');
+      showToast(`File is too large. Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`, 'error');
       e.target.value = '';
       return;
     }
@@ -1057,8 +1099,12 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         isAdmin={isAdmin}
                         onEdit={handleEdit}
                         onBook={handleBook}
-                        manualCount={manualCounts[item.id] || 0}
-                        onManualClick={() => router.push('/manuals')}
+                        manualCount={(manualLinks[item.id] || []).length}
+                        onManualClick={() => {
+                          const linked = manualLinks[item.id] || [];
+                          // Straight to the manual when there is only one.
+                          router.push(linked.length === 1 ? `/manuals/${linked[0]}` : '/manuals');
+                        }}
                       />
                     ))}
                   </tbody>
@@ -1209,6 +1255,44 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       <MessageSquare className="w-5 h-5" />
                     </button>
                   </div>
+                </div>
+
+                {/* Linked manuals */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Linked manuals
+                    {editingManualIds.length > 0 && (
+                      <span className="ml-1 text-xs font-normal text-gray-400">
+                        ({editingManualIds.length} linked)
+                      </span>
+                    )}
+                  </label>
+                  {manuals.length === 0 ? (
+                    <p className="text-xs text-gray-400">No manuals have been uploaded yet.</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                      {manuals.map((manual) => {
+                        const checked = editingManualIds.includes(manual.id);
+                        return (
+                          <label
+                            key={manual.id}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleManualLink(manual.id)}
+                              className="w-4 h-4 accent-purple-600 cursor-pointer flex-shrink-0"
+                            />
+                            <span className="min-w-0">
+                              <span className="text-sm text-gray-900">{manual.title}</span>
+                              <span className="block text-xs text-gray-400 truncate">{manual.pdf_filename}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Broken status */}
