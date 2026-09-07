@@ -304,6 +304,14 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
     setHistoryLoading(false);
   }, []);
 
+  // The photo API routes verify the caller server-side; sessions live in
+  // localStorage, so the access token has to be sent explicitly.
+  async function authHeaders(): Promise<HeadersInit> {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   // ── Signed URL on demand ───────────────────────────────────────────────────
   async function resolvePhotoUrl(site: Site): Promise<Site> {
     if (!site.photo || site.photoUrl) return site;
@@ -373,19 +381,24 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
 
       // Remove old photo
       if (removePhoto && photoPath) {
-        await fetch(`/api/site-photos/${encodeURIComponent(photoPath)}`, { method: 'DELETE' });
+        await fetch(`/api/site-photos/${photoPath}`, { method: 'DELETE', headers: await authHeaders() });
         photoPath = null;
       }
 
       // Upload new photo
       if (formPhotoFile) {
         if (photoPath && !removePhoto) {
-          await fetch(`/api/site-photos/${encodeURIComponent(photoPath)}`, { method: 'DELETE' });
+          await fetch(`/api/site-photos/${photoPath}`, { method: 'DELETE', headers: await authHeaders() });
         }
         const fd = new FormData();
         fd.append('photo', formPhotoFile);
-        const res = await fetch('/api/site-photos', { method: 'POST', body: fd });
+        const res = await fetch('/api/site-photos', {
+          method: 'POST',
+          body: fd,
+          headers: await authHeaders(),
+        });
         const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Photo upload failed');
         photoPath = json.path ?? null;
       }
 
@@ -456,7 +469,7 @@ export default function BruneiMap({ isAdmin }: BruneiMapProps) {
   async function handleDelete(site: Site) {
     if (!confirm(`Delete "${site.name}"?`)) return;
     if (site.photo) {
-      await fetch(`/api/site-photos/${encodeURIComponent(site.photo)}`, { method: 'DELETE' });
+      await fetch(`/api/site-photos/${site.photo}`, { method: 'DELETE', headers: await authHeaders() });
     }
     const { error } = await supabase.from('sites').delete().eq('id', site.id);
     if (error) { alert(error.message); return; }
