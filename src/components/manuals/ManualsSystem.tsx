@@ -526,7 +526,13 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <FileArchive className="w-6 h-6 text-purple-600 flex-shrink-0" />
-                <h2 className="text-2xl font-bold text-gray-900">{masterArchive.title}</h2>
+                {/* The title carries the permalink, so the durable URL stays
+                    reachable without printing a UUID on the page. */}
+                <Link href={`/manuals/${masterArchive.id}`} title="Open this manual on its own page">
+                  <h2 className="text-2xl font-bold text-gray-900 hover:text-blue-700 transition-colors">
+                    {masterArchive.title}
+                  </h2>
+                </Link>
               </div>
               <p className="text-sm text-gray-500 mt-1">
                 {masterArchive.pdf_filename} · {formatFileSize(masterArchive.pdf_size_bytes)}
@@ -577,12 +583,6 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 mt-4 pt-4 border-t border-gray-100">
-            Permanent link:{' '}
-            <Link href={`/manuals/${masterArchive.id}`} className="text-blue-600 hover:underline">
-              /manuals/{masterArchive.id}
-            </Link>
-          </p>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-lg p-8 mb-6 text-center">
