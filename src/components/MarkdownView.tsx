@@ -4,9 +4,21 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 /**
- * Renders the manual index. Raw HTML is not enabled, so Markdown from the
- * archive is displayed as text and markup only — nothing in the document can
- * inject HTML into the page.
+ * HTML comments are stripped before rendering.
+ *
+ * react-markdown does not drop raw HTML when it is disabled — it escapes it and
+ * renders it as visible text. So the keyword and equipment marker comments in
+ * the manuals index would otherwise appear in full on the page. The stored text
+ * is left untouched; only the rendered copy is cleaned, because the equipment
+ * matcher reads those comments from the original.
+ */
+function stripHtmlComments(markdown: string): string {
+  return markdown.replace(/<!--[\s\S]*?-->/g, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * Renders the manual index. Raw HTML is not enabled, so nothing in the document
+ * can inject markup into the page.
  */
 export default function MarkdownView({ children }: { children: string }) {
   return (
@@ -69,7 +81,7 @@ export default function MarkdownView({ children }: { children: string }) {
           hr: () => <hr className="my-4 border-gray-200" />,
         }}
       >
-        {children}
+        {stripHtmlComments(children)}
       </ReactMarkdown>
     </div>
   );

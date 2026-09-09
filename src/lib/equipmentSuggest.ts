@@ -28,9 +28,11 @@
  *  3. Section headings — only when no keyword block is present, so indexes
  *     written before this existed still produce suggestions.
  *
- * Markdown comments do not render, so both marker forms stay invisible to
- * readers: the visible document is written for people, the comments for the
- * matcher, and neither has to compromise for the other.
+ * Both marker forms stay invisible to readers because MarkdownView strips HTML
+ * comments before rendering — react-markdown escapes raw HTML and shows it as
+ * text rather than dropping it, so the stripping is what keeps them hidden.
+ * The visible document is written for people, the comments for the matcher,
+ * and neither has to compromise for the other.
  *
  * Nothing is linked automatically. These are proposals for an admin to accept.
  */

@@ -653,8 +653,8 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
                     <div className="text-xs text-gray-600 space-y-1">
                       <p>Nothing in the inventory matched the index.</p>
                       <p>
-                        Add a keyword block to the index — it does not render, so readers never
-                        see it. One rig per line, aliases separated by <code className="px-1 bg-white rounded">|</code>:
+                        Add a keyword block to the index — it is stripped before display, so
+                        readers never see it. One rig per line, aliases separated by <code className="px-1 bg-white rounded">|</code>:
                       </p>
                       <pre className="bg-white rounded p-2 overflow-x-auto text-[11px] leading-relaxed">{`<!-- lab-system:keywords
 Plasma cleaner | Diener Zepto | vacuum pump
