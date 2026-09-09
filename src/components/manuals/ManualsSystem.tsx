@@ -650,11 +650,22 @@ export default function ManualsSystem({ isAdmin }: ManualsSystemProps) {
               {suggestions !== null && (
                 <div className="mt-2 border border-blue-100 bg-blue-50 rounded-lg p-3">
                   {suggestions.length === 0 ? (
-                    <p className="text-xs text-gray-600">
-                      Nothing in the inventory matched the index headings. Add an
-                      <code className="mx-1 px-1 bg-white rounded">{'<!-- equipment: Item name -->'}</code>
-                      comment under a heading to link one explicitly.
-                    </p>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <p>Nothing in the inventory matched the index.</p>
+                      <p>
+                        Add a keyword block to the index — it does not render, so readers never
+                        see it. One rig per line, aliases separated by <code className="px-1 bg-white rounded">|</code>:
+                      </p>
+                      <pre className="bg-white rounded p-2 overflow-x-auto text-[11px] leading-relaxed">{`<!-- lab-system:keywords
+Plasma cleaner | Diener Zepto | vacuum pump
+Air compressor | PTA513 | Jun Air 64
+-->`}</pre>
+                      <p>
+                        For an exact inventory name, use
+                        <code className="mx-1 px-1 bg-white rounded">{'<!-- equipment: Item name -->'}</code>
+                        instead.
+                      </p>
+                    </div>
                   ) : (
                     <>
                       <div className="flex items-center justify-between mb-2">

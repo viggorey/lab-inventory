@@ -2,25 +2,40 @@
  * Suggests which inventory items a manuals archive covers, by reading the
  * index document.
  *
- * Two signals, in order of confidence:
+ * This is plain string matching — no model, no network call. The same index
+ * always produces the same suggestions.
  *
- *  1. An explicit marker anywhere in the index:
+ * Three signals, in order of confidence:
+ *
+ *  1. An explicit marker naming an inventory item exactly:
  *
  *       <!-- equipment: Femto Oxygen Plasma Cleaner -->
  *       <!-- equipment: Basler acA2040; Photron SA-Z -->
  *
- *     Markdown comments do not render, so these stay invisible to readers.
- *     Names are matched case-insensitively against the inventory.
+ *  2. A keyword block listing aliases, one rig per line, separated by "|":
  *
- *  2. Section headings. Index headings name the equipment a section covers
- *     ("## Plasma cleaner (Diener Zepto)"), so inventory items are scored
- *     against heading text rather than the whole document — matching the body
- *     produces far too much noise.
+ *       <!-- lab-system:keywords
+ *       Plasma cleaner | Diener Zepto | Femto oxygen plasma cleaner
+ *       Air compressor | PTA513 | Jun Air 64 | compressed air
+ *       -->
+ *
+ *     Each alias is scored independently against every inventory item and the
+ *     best score per item wins. Short aliases are what make the scoring work:
+ *     the phrase-coverage term divides by the phrase's own word count, so a
+ *     long list of synonyms crammed into one string dilutes itself, while
+ *     "Diener Zepto" on its own is a clean two-word signal.
+ *
+ *  3. Section headings — only when no keyword block is present, so indexes
+ *     written before this existed still produce suggestions.
+ *
+ * Markdown comments do not render, so both marker forms stay invisible to
+ * readers: the visible document is written for people, the comments for the
+ * matcher, and neither has to compromise for the other.
  *
  * Nothing is linked automatically. These are proposals for an admin to accept.
  */
 
-export type SuggestionReason = 'explicit' | 'heading';
+export type SuggestionReason = 'explicit' | 'keyword' | 'heading';
 
 export interface EquipmentItem {
   id: string;
@@ -31,11 +46,12 @@ export interface EquipmentItem {
 export interface Suggestion {
   item: EquipmentItem;
   reason: SuggestionReason;
-  /** The heading or marker the match came from, for display. */
+  /** The alias, marker or heading the match came from, for display. */
   matchedOn: string;
 }
 
-const EXPLICIT_MARKER = /<!--\s*equipment:\s*([^>]*?)\s*-->/gi;
+const EXPLICIT_MARKER = /<!--\s*equipment:\s*([\s\S]*?)\s*-->/gi;
+const KEYWORDS_BLOCK = /<!--\s*lab-system:keywords\s*([\s\S]*?)-->/gi;
 
 /** Words too generic to carry a match on their own. */
 const WEAK_TOKENS = new Set([
@@ -85,7 +101,7 @@ export function extractHeadings(markdown: string): string[] {
 export function extractExplicitNames(markdown: string): string[] {
   const names: string[] = [];
   for (const match of markdown.matchAll(EXPLICIT_MARKER)) {
-    for (const part of match[1].split(/[;,]/)) {
+    for (const part of match[1].split(/[;,\n]/)) {
       const name = part.trim();
       if (name) names.push(name);
     }
@@ -94,26 +110,42 @@ export function extractExplicitNames(markdown: string): string[] {
 }
 
 /**
- * Score an inventory item against one heading.
+ * Aliases from every lab-system:keywords block, flattened.
+ * Line breaks and "|" both separate aliases; the line grouping is purely for
+ * human readability and carries no meaning to the matcher.
+ */
+export function extractKeywords(markdown: string): string[] {
+  const aliases: string[] = [];
+  for (const match of markdown.matchAll(KEYWORDS_BLOCK)) {
+    for (const part of match[1].split(/[|\n]/)) {
+      const alias = part.trim();
+      if (alias) aliases.push(alias);
+    }
+  }
+  return aliases;
+}
+
+/**
+ * Score an inventory item against one phrase — an alias or a heading.
  * Returns 0 when there is no meaningful overlap.
  */
-function scoreAgainstHeading(itemName: string, heading: string): number {
+function scoreAgainstPhrase(itemName: string, phrase: string): number {
   const itemTokens = tokens(itemName);
-  const headingTokens = tokens(heading);
-  if (itemTokens.length === 0 || headingTokens.length === 0) return 0;
+  const phraseTokens = tokens(phrase);
+  if (itemTokens.length === 0 || phraseTokens.length === 0) return 0;
 
-  const headingSet = new Set(headingTokens);
+  const phraseSet = new Set(phraseTokens);
   const itemSet = new Set(itemTokens);
 
-  const present = itemTokens.filter((t) => headingSet.has(t));
+  const present = itemTokens.filter((t) => phraseSet.has(t));
   if (present.length === 0) return 0;
 
-  // Two of the item's words appearing side by side in the heading
+  // Two of the item's words appearing side by side in the phrase
   // ("plasma cleaner") is a much stronger signal than scattered single words.
   let contiguousBonus = 0;
   for (let i = 0; i < itemTokens.length - 1; i++) {
-    for (let j = 0; j < headingTokens.length - 1; j++) {
-      if (itemTokens[i] === headingTokens[j] && itemTokens[i + 1] === headingTokens[j + 1]) {
+    for (let j = 0; j < phraseTokens.length - 1; j++) {
+      if (itemTokens[i] === phraseTokens[j] && itemTokens[i + 1] === phraseTokens[j + 1]) {
         contiguousBonus = 0.4;
         break;
       }
@@ -121,15 +153,22 @@ function scoreAgainstHeading(itemName: string, heading: string): number {
     if (contiguousBonus) break;
   }
 
-  // Reward covering the heading's own words too, so a one-word item name does
-  // not match every heading that happens to contain that word.
-  const headingCoverage = headingTokens.filter((t) => itemSet.has(t)).length / headingTokens.length;
+  // Reward covering the phrase's own words too, so a one-word item name does
+  // not match every phrase that happens to contain that word. This term is why
+  // short aliases beat long headings: it divides by the phrase's word count.
+  const phraseCoverage = phraseTokens.filter((t) => itemSet.has(t)).length / phraseTokens.length;
   const itemCoverage = present.length / itemTokens.length;
 
-  return Math.min(1, itemCoverage * 0.5 + headingCoverage * 0.4 + contiguousBonus);
+  return Math.min(1, itemCoverage * 0.5 + phraseCoverage * 0.4 + contiguousBonus);
 }
 
 const SCORE_THRESHOLD = 0.45;
+
+const REASON_ORDER: Record<SuggestionReason, number> = {
+  explicit: 0,
+  keyword: 1,
+  heading: 2,
+};
 
 export function suggestEquipment(
   indexText: string,
@@ -139,35 +178,38 @@ export function suggestEquipment(
 
   const results = new Map<string, Suggestion>();
 
-  // 1. Explicit markers win outright.
+  // 1. Explicit markers win outright — an exact inventory name.
   const explicit = extractExplicitNames(indexText).map((n) => normalise(n));
   for (const item of equipment) {
-    const name = normalise(item.name);
-    const hit = explicit.find((e) => e === name);
-    if (hit) {
+    if (explicit.includes(normalise(item.name))) {
       results.set(item.id, { item, reason: 'explicit', matchedOn: item.name });
     }
   }
 
-  // 2. Heading matches for anything not already matched explicitly.
-  const headings = extractHeadings(indexText);
+  // 2. Keyword aliases when the index provides them, headings otherwise.
+  //    A keyword block is a deliberate statement of what the archive covers,
+  //    so it replaces heading matching rather than adding to it.
+  const keywords = extractKeywords(indexText);
+  const phrases = keywords.length > 0 ? keywords : extractHeadings(indexText);
+  const reason: SuggestionReason = keywords.length > 0 ? 'keyword' : 'heading';
+
   for (const item of equipment) {
     if (results.has(item.id)) continue;
 
-    let best = { score: 0, heading: '' };
-    for (const heading of headings) {
-      const score = scoreAgainstHeading(item.name, heading);
-      if (score > best.score) best = { score, heading };
+    let best = { score: 0, phrase: '' };
+    for (const phrase of phrases) {
+      const score = scoreAgainstPhrase(item.name, phrase);
+      if (score > best.score) best = { score, phrase };
     }
 
     if (best.score >= SCORE_THRESHOLD) {
-      results.set(item.id, { item, reason: 'heading', matchedOn: best.heading });
+      results.set(item.id, { item, reason, matchedOn: best.phrase });
     }
   }
 
-  // Explicit first, then alphabetical.
+  // Most confident first, then alphabetical.
   return [...results.values()].sort((a, b) => {
-    if (a.reason !== b.reason) return a.reason === 'explicit' ? -1 : 1;
-    return a.item.name.localeCompare(b.item.name);
+    const byReason = REASON_ORDER[a.reason] - REASON_ORDER[b.reason];
+    return byReason !== 0 ? byReason : a.item.name.localeCompare(b.item.name);
   });
 }
